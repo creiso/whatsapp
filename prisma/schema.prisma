@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  role      String   @default("AGENT") // "ADMIN" ou "AGENT"
+  isOnline  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  teams        AgentTeam[]
+  conversations Conversation[]
+}
+
+model Team {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  agents       AgentTeam[]
+  campaigns    Campaign[]
+  conversations Conversation[]
+}
+
+model AgentTeam {
+  agentId String
+  teamId  String
+  agent   User   @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  team    Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@id([agentId, teamId])
+}
+
+model Contact {
+  id            String   @id @default(uuid())
+  phone         String   @unique
+  name          String?
+  dynamicFields String   @default("{}") // JSON como String no SQLite
+  status        String   @default("ACTIVE") // ACTIVE, EXCEPTION, QUARANTINE
+  createdAt     DateTime @default(now())
+
+  conversation Conversation?
+}
+
+model Campaign {
+  id               String   @id @default(uuid())
+  name             String
+  metaTemplateId   String
+  metaTemplateName String
+  teamId           String?
+  status           String   @default("DRAFT") // DRAFT, RUNNING, PAUSED, COMPLETED
+  createdAt        DateTime @default(now())
+
+  team Team? @relation(fields: [teamId], references: [id], onDelete: SetNull)
+}
+
+model Conversation {
+  id        String   @id @default(uuid())
+  contactId String   @unique
+  agentId   String?
+  teamId    String
+  isLocked  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  agent   User?   @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  team    Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  messages Message[]
+}
+
+model Message {
+  id             String   @id @default(uuid())
+  conversationId String
+  direction      String   // INBOUND, OUTBOUND
+  content        String?
+  metaMessageId  String?  @unique
+  status         String   @default("SENT") // SENT, DELIVERED, READ, FAILED
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}

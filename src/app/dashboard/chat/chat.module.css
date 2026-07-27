@@ -1,0 +1,238 @@
+.container {
+  display: flex;
+  height: calc(100vh - 140px); /* Ajuste para o header e padding */
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+/* Lista de Conversas (Esquerda) */
+.sidebar {
+  width: 320px;
+  background: rgba(15, 17, 21, 0.9);
+  border-right: 1px solid var(--surface-border);
+  display: flex;
+  flex-direction: column;
+}
+
+.searchHeader {
+  padding: 16px;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.searchInput {
+  width: 100%;
+  background: var(--background);
+  border: 1px solid var(--surface-border);
+  padding: 10px 16px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+}
+
+.searchInput:focus {
+  border-color: var(--primary);
+}
+
+.conversationList {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.conversationItem {
+  display: flex;
+  padding: 16px;
+  gap: 12px;
+  border-bottom: 1px solid var(--surface-border);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.conversationItem:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.conversationItemActive {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: #fff;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.conversationInfo {
+  flex: 1;
+  overflow: hidden;
+}
+
+.contactName {
+  font-weight: 600;
+  color: #fff;
+  font-size: 15px;
+  margin-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.time {
+  font-size: 12px;
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+.lastMessage {
+  font-size: 13px;
+  color: #9ca3af;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tags {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--success);
+  font-weight: 600;
+}
+
+.tagLocked {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--error);
+}
+
+/* Área de Chat (Direita) */
+.chatArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: url('https://web.whatsapp.com/img/bg-chat-tile-dark_a4be512e7195b6b733d9110b408f075d.png');
+  background-color: #0b141a; /* Fundo estilo WhatsApp Web Escuro */
+}
+
+.chatHeader {
+  height: 64px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--surface-border);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 16px;
+}
+
+.messagesContainer {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.message {
+  max-width: 65%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+  position: relative;
+}
+
+.messageInbound {
+  align-self: flex-start;
+  background: var(--surface);
+  color: #fff;
+  border-top-left-radius: 0;
+}
+
+.messageOutbound {
+  align-self: flex-end;
+  background: #005c4b; /* Verde escuro do WhatsApp */
+  color: #e9edef;
+  border-top-right-radius: 0;
+}
+
+.messageTime {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  float: right;
+  margin-top: 4px;
+  margin-left: 12px;
+}
+
+.inputArea {
+  padding: 16px 24px;
+  background: var(--surface);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.input {
+  flex: 1;
+  background: var(--background);
+  border: 1px solid var(--surface-border);
+  padding: 14px 16px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 15px;
+  outline: none;
+}
+
+.input:focus {
+  border-color: var(--primary);
+}
+
+.sendButton {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sendButton:hover:not(:disabled) {
+  background: var(--primary-hover);
+  transform: scale(1.05);
+}
+
+.sendButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.lockedBanner {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--error);
+  padding: 12px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  border-top: 1px solid rgba(239, 68, 68, 0.2);
+}

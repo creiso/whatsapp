@@ -1,0 +1,150 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.headerActions {
+  display: flex;
+  gap: 12px;
+}
+
+.buttonSecondary {
+  background: transparent;
+  color: #fff;
+  border: 1px solid var(--surface-border);
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.buttonSecondary:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.buttonPrimary {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.buttonPrimary:hover {
+  background: var(--primary-hover);
+}
+
+.filters {
+  display: flex;
+  gap: 16px;
+  background: rgba(26, 29, 36, 0.7);
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--surface-border);
+}
+
+.filterInput {
+  background: var(--background);
+  border: 1px solid var(--surface-border);
+  padding: 10px 16px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+  width: 300px;
+}
+
+.filterSelect {
+  background: var(--background);
+  border: 1px solid var(--surface-border);
+  padding: 10px 16px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+}
+
+.tableContainer {
+  background: rgba(26, 29, 36, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.th {
+  text-align: left;
+  padding: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #9ca3af;
+  border-bottom: 1px solid var(--surface-border);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.td {
+  padding: 16px;
+  font-size: 14px;
+  color: #e5e7eb;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.tr:hover .td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tr:last-child .td {
+  border-bottom: none;
+}
+
+.statusBadge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 12px;
+}
+
+.statusActive {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--success);
+}
+
+.statusException {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--error);
+}
+
+.dynamicField {
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-right: 4px;
+}
