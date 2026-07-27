@@ -65,7 +65,7 @@ export default function ChatPage() {
           ...conv,
           lastMessage: newMessage.content,
           time: newMessage.time,
-          lockedBy: isFirstReply ? currentUserEmail : conv.lockedBy,
+          lockedBy: isFirstReply ? (currentUserEmail || null) : conv.lockedBy,
           messages: [...conv.messages, newMessage]
         };
       }
