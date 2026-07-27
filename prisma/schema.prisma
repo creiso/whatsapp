@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  role      Role     @default(AGENT)
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  teamId    String?
+  Team      Team?    @relation(fields: [teamId], references: [id])
+  lockedConversations Conversation[] @relation("LockedByAgent")
+  messages  Message[]
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String
+  users     User[]
+  campaigns Campaign[]
+}
+
+model Contact {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  name      String?
+  attributes String? // JSON de tags ou colunas dinamicas
+  createdAt DateTime @default(now())
+  status    String   @default("ACTIVE") // ACTIVE, EXCEPTION
+  conversations Conversation[]
+}
+
+model Campaign {
+  id        String   @id @default(cuid())
+  name      String
+  status    String   @default("DRAFT") // DRAFT, RUNNING, COMPLETED
+  template  String
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  contactId String
+  contact   Contact  @relation(fields: [contactId], references: [id])
+  lockedById String?
+  lockedBy  User?    @relation("LockedByAgent", fields: [lockedById], references: [id])
+  status    String   @default("OPEN")
+  createdAt DateTime @default(now())
+  messages  Message[]
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  content        String
+  direction      String   // INBOUND, OUTBOUND
+  senderId       String?
+  sender         User?    @relation(fields: [senderId], references: [id])
+  createdAt      DateTime @default(now())
+}
+
+enum Role {
+  ADMIN
+  AGENT
+}
