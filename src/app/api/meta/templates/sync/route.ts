@@ -41,17 +41,13 @@ export async function POST() {
     const data = await response.json();
     const templates = data.data;
 
+    // Clear old templates to avoid ghost templates from previous WABA IDs
+    await prisma.metaTemplate.deleteMany();
+
     let count = 0;
     for (const template of templates) {
-      await prisma.metaTemplate.upsert({
-        where: { name: template.name },
-        update: {
-          language: template.language,
-          status: template.status,
-          category: template.category,
-          components: JSON.stringify(template.components),
-        },
-        create: {
+      await prisma.metaTemplate.create({
+        data: {
           name: template.name,
           language: template.language,
           status: template.status,
