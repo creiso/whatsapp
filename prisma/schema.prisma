@@ -26,7 +26,6 @@ model Team {
   id        String   @id @default(cuid())
   name      String
   users     User[]
-  campaigns Campaign[]
   contacts  Contact[]
 }
 
@@ -39,7 +38,16 @@ model Contact {
   status    String   @default("ACTIVE") // ACTIVE, EXCEPTION
   teamId    String?  // Relacionamento com a equipe (Leads sem equipe vão para "Sequência Inicial")
   team      Team?    @relation(fields: [teamId], references: [id])
+  lists     ContactList[]
   conversations Conversation[]
+}
+
+model ContactList {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  contacts  Contact[]
+  campaigns Campaign[]
 }
 
 
@@ -48,8 +56,8 @@ model Campaign {
   name      String
   status    String   @default("DRAFT") // DRAFT, RUNNING, COMPLETED
   template  String
-  teamId    String
-  team      Team     @relation(fields: [teamId], references: [id])
+  listId    String
+  list      ContactList @relation(fields: [listId], references: [id])
   createdAt DateTime @default(now())
 }
 

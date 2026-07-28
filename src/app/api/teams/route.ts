@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 export async function GET() {
   try {
     const teams = await prisma.team.findMany({
-      include: { users: true, _count: { select: { users: true, campaigns: true } } },
+      include: { users: true, _count: { select: { users: true } } },
       orderBy: { name: "asc" },
     });
     return NextResponse.json(teams);

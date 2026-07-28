@@ -3,10 +3,20 @@ import prisma from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {
-    const contacts = await req.json();
+    const body = await req.json();
+    const { listName, contacts } = body;
     
     if (!Array.isArray(contacts)) {
-      return NextResponse.json({ error: "Invalid payload format" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid payload format. Expected { listName?: string, contacts: any[] }" }, { status: 400 });
+    }
+
+    let list = null;
+    if (listName) {
+      list = await prisma.contactList.upsert({
+        where: { name: listName },
+        update: {},
+        create: { name: listName },
+      });
     }
 
     let imported = 0;
@@ -22,12 +32,14 @@ export async function POST(req: Request) {
         update: {
           name: contact.name || undefined,
           attributes: attrsStr || undefined,
+          ...(list ? { lists: { connect: { id: list.id } } } : {}),
         },
         create: {
           phone: contact.phone,
           name: contact.name || null,
           attributes: attrsStr,
           status: 'ACTIVE',
+          ...(list ? { lists: { connect: { id: list.id } } } : {}),
         },
       });
       imported++;

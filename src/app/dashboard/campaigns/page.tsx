@@ -5,13 +5,13 @@ import styles from './campaigns.module.css';
 
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<any[]>([]);
-  const [teams, setTeams] = useState<any[]>([]);
+  const [lists, setLists] = useState<any[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newCampaign, setNewCampaign] = useState({ name: '', template: '', teamId: '' });
+  const [newCampaign, setNewCampaign] = useState({ name: '', template: '', listId: '' });
   
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -34,15 +34,15 @@ export default function CampaignsPage() {
     }
   };
 
-  const fetchTeams = async () => {
+  const fetchLists = async () => {
     try {
-      const res = await fetch('/api/teams');
+      const res = await fetch('/api/lists');
       if (res.ok) {
         const data = await res.json();
-        setTeams(data);
+        setLists(data);
       }
     } catch (error) {
-      console.error('Error fetching teams', error);
+      console.error('Error fetching lists', error);
     }
   };
 
@@ -59,7 +59,7 @@ export default function CampaignsPage() {
   };
 
   useEffect(() => {
-    Promise.all([fetchCampaigns(), fetchTeams(), fetchTemplates()]).finally(() => setLoading(false));
+    Promise.all([fetchCampaigns(), fetchLists(), fetchTemplates()]).finally(() => setLoading(false));
   }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -73,7 +73,7 @@ export default function CampaignsPage() {
       if (res.ok) {
         showToast('Campanha criada com sucesso!', 'success');
         setIsModalOpen(false);
-        setNewCampaign({ name: '', template: '', teamId: '' });
+        setNewCampaign({ name: '', template: '', listId: '' });
         fetchCampaigns();
       } else {
         showToast('Erro ao criar campanha', 'error');
@@ -168,7 +168,7 @@ export default function CampaignsPage() {
 
               <div className={styles.details}>
                 <div><strong>Template:</strong> {campaign.template}</div>
-                <div><strong>Equipe Responsável:</strong> {campaign.team?.name || 'Sem Equipe'}</div>
+                <div><strong>Público-Alvo (Lista):</strong> {campaign.list?.name || 'Sem Lista'}</div>
               </div>
             </div>
           ))}
@@ -212,16 +212,16 @@ export default function CampaignsPage() {
                 </select>
               </div>
               <div className={styles.formGroup}>
-                <label>Equipe</label>
+                <label>Lista (Público-Alvo)</label>
                 <select 
-                  value={newCampaign.teamId} 
-                  onChange={e => setNewCampaign({...newCampaign, teamId: e.target.value})}
+                  value={newCampaign.listId} 
+                  onChange={e => setNewCampaign({...newCampaign, listId: e.target.value})}
                   required
                   className={styles.select}
                 >
-                  <option value="">Selecione uma equipe</option>
-                  {teams.map(team => (
-                    <option key={team.id} value={team.id}>{team.name}</option>
+                  <option value="">Selecione uma lista</option>
+                  {lists.map(list => (
+                    <option key={list.id} value={list.id}>{list.name}</option>
                   ))}
                 </select>
               </div>

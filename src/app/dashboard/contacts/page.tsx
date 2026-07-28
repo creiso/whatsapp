@@ -29,6 +29,7 @@ export default function ContactsPage() {
   const [mappedPhone, setMappedPhone] = useState<string>('');
   const [mappedName, setMappedName] = useState<string>('');
   const [mappedCustom, setMappedCustom] = useState<{key: string, index: string}[]>([]);
+  const [listName, setListName] = useState<string>('');
 
   // Modal Form State
   const [newName, setNewName] = useState('');
@@ -184,7 +185,7 @@ export default function ContactsPage() {
       const res = await fetch('/api/contacts/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ listName, contacts: payload }),
       });
 
       if (!res.ok) throw new Error();
@@ -366,6 +367,16 @@ export default function ContactsPage() {
             <div className={styles.modalHeader}>
               <h2 className={styles.modalTitle}>Mapeamento de Colunas</h2>
               <button className={styles.closeButton} onClick={() => setIsMappingModalOpen(false)}>×</button>
+            </div>
+            <div className={styles.formGroup} style={{ padding: '0 24px', marginTop: '16px' }}>
+              <label className={styles.label}>Nome da Lista (Opcional)</label>
+              <input 
+                type="text" 
+                className={styles.input} 
+                value={listName}
+                onChange={(e) => setListName(e.target.value)}
+                placeholder="Ex: Leads Campanha X"
+              />
             </div>
             <div className={styles.tableContainer} style={{ marginBottom: '24px' }}>
               <table className={styles.table}>

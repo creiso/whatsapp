@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 export async function GET() {
   try {
     const campaigns = await prisma.campaign.findMany({
-      include: { team: true },
+      include: { list: true },
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json(campaigns);
@@ -16,15 +16,15 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const { name, template, teamId } = await req.json();
-    if (!name || !template || !teamId) {
+    const { name, template, listId } = await req.json();
+    if (!name || !template || !listId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
     const campaign = await prisma.campaign.create({
       data: {
         name,
         template,
-        teamId,
+        listId,
       },
     });
     return NextResponse.json(campaign);
