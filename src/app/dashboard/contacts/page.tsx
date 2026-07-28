@@ -29,7 +29,10 @@ export default function ContactsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBulkActionLoading, setIsBulkActionLoading] = useState(false);
+  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+  const [bulkMoveTeamId, setBulkMoveTeamId] = useState('');  
   // Layout State
   const [selectedListId, setSelectedListId] = useState<string>('ALL');
   const [sidebarSearch, setSidebarSearch] = useState('');
@@ -102,6 +105,7 @@ export default function ContactsPage() {
 
   useEffect(() => {
     fetchContacts(selectedListId);
+    setSelectedIds([]);
   }, [selectedListId]);
 
   const showToast = (message: string, type: 'success' | 'error') => {
@@ -249,6 +253,28 @@ export default function ContactsPage() {
     }
   };
 
+  const handleDeleteList = async () => {
+    if (selectedListId === 'ALL') return;
+    if (!window.confirm('Tem certeza que deseja excluir esta lista E TODOS os contatos contidos nela?')) return;
+    
+    setIsBulkActionLoading(true);
+    try {
+      const res = await fetch('/api/lists', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: selectedListId }),
+      });
+      if (!res.ok) throw new Error();
+      setSelectedListId('ALL');
+      fetchLists();
+      showToast('Lista e contatos excluídos com sucesso', 'success');
+    } catch {
+      showToast('Erro ao excluir lista', 'error');
+    } finally {
+      setIsBulkActionLoading(false);
+    }
+  };
+
   const filteredContacts = useMemo(() => {
     return contacts.filter(c => {
       const matchesStatus = filterStatus === 'ALL' || c.status === filterStatus;
@@ -265,6 +291,99 @@ export default function ContactsPage() {
   }, [filteredContacts, currentPage]);
 
   const totalPages = Math.ceil(filteredContacts.length / itemsPerPage);
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      const visibleIds = paginatedContacts.map(c => c.id);
+      setSelectedIds(prev => Array.from(new Set([...prev, ...visibleIds])));
+    } else {
+      const visibleIds = paginatedContacts.map(c => c.id);
+      setSelectedIds(prev => prev.filter(id => !visibleIds.includes(id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(pid => pid !== id) : [...prev, id]
+    );
+  };
+
+  const isAllVisibleSelected = paginatedContacts.length > 0 && paginatedContacts.every(c => selectedIds.includes(c.id));
+
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Tem certeza que deseja excluir ${selectedIds.length} contatos?`)) return;
+    setIsBulkActionLoading(true);
+    try {
+      const res = await fetch('/api/contacts/bulk/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'DELETE', ids: selectedIds }),
+      });
+      if (!res.ok) throw new Error();
+      setSelectedIds([]);
+      fetchContacts(selectedListId);
+      fetchLists();
+      showToast('Contatos excluídos com sucesso', 'success');
+    } catch {
+      showToast('Erro ao excluir contatos', 'error');
+    } finally {
+      setIsBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkMove = async () => {
+    if (!bulkMoveTeamId) {
+      showToast('Selecione uma equipe', 'error');
+      return;
+    }
+    setIsBulkActionLoading(true);
+    try {
+      const res = await fetch('/api/contacts/bulk/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'MOVE', ids: selectedIds, teamId: bulkMoveTeamId }),
+      });
+      if (!res.ok) throw new Error();
+      setSelectedIds([]);
+      setIsMoveModalOpen(false);
+      fetchContacts(selectedListId);
+      fetchLists();
+      showToast('Contatos movidos com sucesso', 'success');
+    } catch {
+      showToast('Erro ao mover contatos', 'error');
+    } finally {
+      setIsBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkDownload = () => {
+    const dataToDownload = filteredContacts
+      .filter(c => selectedIds.includes(c.id))
+      .map(c => {
+        let attrs = {};
+        try { attrs = c.attributes ? JSON.parse(c.attributes) : {}; } catch(e) {}
+        return {
+          ID: c.id,
+          Nome: c.name || '',
+          Telefone: c.phone,
+          Status: c.status,
+          ...attrs
+        };
+      });
+    
+    if (dataToDownload.length === 0) return;
+    
+    const worksheet = XLSX.utils.json_to_sheet(dataToDownload);
+    const csv = XLSX.utils.sheet_to_csv(worksheet);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'contatos_selecionados.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const groupedLists = useMemo(() => {
     const groups: { [key: string]: { name: string; lists: ContactList[] } } = {
@@ -297,8 +416,29 @@ export default function ContactsPage() {
         </div>
       )}
 
+      {isBulkActionLoading && (
+        <div className={styles.bulkLoadingOverlay}>
+          <div className={styles.spinner}></div>
+          <p style={{ marginTop: '16px' }}>Processando...</p>
+        </div>
+      )}
+
       <div className={styles.header}>
-        <h1 className={styles.title}>Base de Contatos</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <h1 className={styles.title}>
+            Base de Contatos {selectedListId !== 'ALL' && lists.find(l => l.id === selectedListId) && `> ${lists.find(l => l.id === selectedListId)?.name}`}
+          </h1>
+          {selectedListId !== 'ALL' && (
+            <button className={styles.iconButton} onClick={handleDeleteList} title="Excluir Lista">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                <line x1="10" y1="11" x2="10" y2="17"></line>
+                <line x1="14" y1="11" x2="14" y2="17"></line>
+              </svg>
+            </button>
+          )}
+        </div>
         <div className={styles.headerActions}>
           <input 
             type="file" 
@@ -365,30 +505,53 @@ export default function ContactsPage() {
         </div>
 
         <div className={styles.mainContent}>
-          <div className={styles.filters}>
-            <input 
-              type="text" 
-              placeholder="Buscar por nome ou telefone..." 
-              className={styles.filterInput} 
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-            />
-            <select 
-              className={styles.filterSelect}
-              value={filterStatus}
-              onChange={(e) => {
-                setFilterStatus(e.target.value);
-                setCurrentPage(1);
-              }}
-            >
-              <option value="ALL">Todos os Status</option>
-              <option value="ACTIVE">Ativos</option>
-              <option value="EXCEPTION">Exceções (Inválidos)</option>
-            </select>
-          </div>
+          {selectedIds.length > 0 ? (
+            <div className={styles.bulkToolbar}>
+              <span>{selectedIds.length} selecionado{selectedIds.length > 1 ? 's' : ''}</span>
+              <div className={styles.bulkToolbarActions}>
+                <button className={styles.buttonSecondary} onClick={() => setIsMoveModalOpen(true)}>Mover</button>
+                <button className={styles.buttonSecondary} onClick={handleBulkDelete}>Excluir</button>
+                <button className={styles.buttonSecondary} onClick={handleBulkDownload}>Baixar CSV</button>
+              </div>
+            </div>
+          ) : (
+            <div className={styles.filters}>
+              <input 
+                type="text" 
+                placeholder="Buscar por nome ou telefone..." 
+                className={styles.filterInput} 
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+              <select 
+                className={styles.filterSelect}
+                value={filterStatus}
+                onChange={(e) => {
+                  setFilterStatus(e.target.value);
+                  setCurrentPage(1);
+                }}
+              >
+                <option value="ALL">Todos os Status</option>
+                <option value="ACTIVE">Ativos</option>
+                <option value="EXCEPTION">Exceções (Inválidos)</option>
+              </select>
+            </div>
+          )}
+          
+          {selectedIds.length === paginatedContacts.length && filteredContacts.length > paginatedContacts.length && paginatedContacts.length > 0 && (
+            <div className={styles.bulkBanner}>
+              Todos os {paginatedContacts.length} contatos desta página estão selecionados.
+              <span 
+                className={styles.bulkBannerLink} 
+                onClick={() => setSelectedIds(filteredContacts.map(c => c.id))}
+              >
+                Selecionar todos os {filteredContacts.length} contatos da lista
+              </span>
+            </div>
+          )}
 
           <div className={styles.tableContainer}>
             {loading ? (
@@ -402,7 +565,12 @@ export default function ContactsPage() {
                   <thead>
                     <tr>
                       <th className={styles.th} style={{ width: '40px' }}>
-                        <input type="checkbox" className={styles.checkbox} />
+                        <input 
+                          type="checkbox" 
+                          className={styles.checkbox} 
+                          checked={isAllVisibleSelected}
+                          onChange={handleSelectAll}
+                        />
                       </th>
                       <th className={styles.th}>Nome</th>
                       <th className={styles.th}>Telefone</th>
@@ -426,7 +594,12 @@ export default function ContactsPage() {
                         return (
                           <tr key={contact.id} className={styles.tr}>
                             <td className={styles.td}>
-                              <input type="checkbox" className={styles.checkbox} />
+                              <input 
+                                type="checkbox" 
+                                className={styles.checkbox} 
+                                checked={selectedIds.includes(contact.id)}
+                                onChange={() => toggleSelect(contact.id)}
+                              />
                             </td>
                             <td className={styles.td} style={{ fontWeight: 500, color: '#fff' }}>{contact.name || '-'}</td>
                             <td className={styles.td}>{contact.phone}</td>
@@ -656,6 +829,35 @@ export default function ContactsPage() {
             <div className={styles.modalFooter}>
                <button className={styles.buttonSecondary} onClick={() => setIsMappingModalOpen(false)}>Cancelar</button>
                <button className={styles.buttonPrimary} onClick={handleConfirmImport}>Confirmar Importação</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MOVE MODAL */}
+      {isMoveModalOpen && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>Mover Contatos</h2>
+              <button className={styles.closeButton} onClick={() => setIsMoveModalOpen(false)}>×</button>
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Equipe de Destino</label>
+              <select 
+                className={styles.input} 
+                value={bulkMoveTeamId}
+                onChange={(e) => setBulkMoveTeamId(e.target.value)}
+              >
+                <option value="">Selecione a Equipe</option>
+                {teams.map(team => (
+                  <option key={team.id} value={team.id}>{team.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className={styles.modalFooter}>
+              <button className={styles.buttonSecondary} onClick={() => setIsMoveModalOpen(false)}>Cancelar</button>
+              <button className={styles.buttonPrimary} onClick={handleBulkMove}>Mover</button>
             </div>
           </div>
         </div>
