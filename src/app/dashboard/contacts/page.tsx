@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import styles from './contacts.module.css';
 
 type Contact = {
@@ -104,21 +105,23 @@ export default function ContactsPage() {
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      const text = event.target?.result as string;
-      if (text) {
-        // Basic CSV parsing with delimiter detection
-        const lines = text.split('\n');
-        const firstLine = lines[0] || '';
-        const delimiter = firstLine.includes(';') ? ';' : ',';
-        const rows = lines.map(row => row.split(delimiter).map(c => c.trim()));
+      const data = new Uint8Array(event.target?.result as ArrayBuffer);
+      
+      try {
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        
+        // Convert to array of arrays, defalval: '' ensures empty cells aren't skipped
+        const rows: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
         
         if (rows.length < 2) {
-          showToast('O arquivo CSV deve conter pelo menos um cabeçalho e uma linha de dados', 'error');
+          showToast('A planilha deve conter pelo menos um cabeçalho e uma linha de dados', 'error');
           return;
         }
         
-        const headers = rows[0];
-        const sample = rows[1] || [];
+        const headers = rows[0].map(String);
+        const sample = rows[1] ? rows[1].map(String) : [];
         
         let phoneIdx = '';
         let nameIdx = '';
@@ -136,14 +139,18 @@ export default function ContactsPage() {
 
         setCsvHeaders(headers);
         setCsvSampleData(sample);
-        setCsvData(rows.slice(1).filter(r => r.some(c => c))); // remove empty rows
+        // Save the rest of the rows, converting all cells to string
+        const dataRows = rows.slice(1).filter(r => r.some(c => c !== '')).map(r => r.map(String));
+        setCsvData(dataRows);
         setMappedPhone(phoneIdx);
         setMappedName(nameIdx);
         setMappedCustom(custom);
         setIsMappingModalOpen(true);
+      } catch (err) {
+        showToast('Erro ao ler a planilha. Tente novamente.', 'error');
       }
     };
-    reader.readAsText(file);
+    reader.readAsArrayBuffer(file);
     
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -211,7 +218,7 @@ export default function ContactsPage() {
         <div className={styles.headerActions}>
           <input 
             type="file" 
-            accept=".csv" 
+            accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" 
             style={{ display: 'none' }} 
             ref={fileInputRef}
             onChange={handleFileChange}
@@ -225,7 +232,7 @@ export default function ContactsPage() {
               <polyline points="17 8 12 3 7 8"></polyline>
               <line x1="12" y1="3" x2="12" y2="15"></line>
             </svg>
-            Importar Planilha (CSV)
+            Importar Planilha (XLSX/CSV)
           </button>
           <button className={styles.buttonPrimary} onClick={() => setIsModalOpen(true)}>+ Novo Contato</button>
         </div>
