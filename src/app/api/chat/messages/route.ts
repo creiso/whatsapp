@@ -27,6 +27,7 @@ export async function GET(req: Request) {
       id: msg.id,
       direction: msg.direction,
       content: msg.content,
+      status: msg.status,
       time: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     }));
 
@@ -71,6 +72,9 @@ export async function POST(req: Request) {
       });
     }
 
+    let messageStatus = "SENT";
+    let metaErrorMessage = "";
+
     const accessTokenSetting = await prisma.setting.findUnique({ where: { key: "meta_access_token" } });
     const phoneNumberIdSetting = await prisma.setting.findUnique({ where: { key: "meta_phone_number_id" } });
     
@@ -100,8 +104,12 @@ export async function POST(req: Request) {
       if (!metaRes.ok) {
         const errorData = await metaRes.json();
         console.error("Meta API error:", errorData);
-        // We still save the message or maybe fail? Let's assume we proceed or handle error.
+        messageStatus = "FAILED";
+        metaErrorMessage = JSON.stringify(errorData);
       }
+    } else {
+      messageStatus = "FAILED";
+      metaErrorMessage = "Meta API settings missing";
     }
 
     const message = await prisma.message.create({
@@ -110,6 +118,7 @@ export async function POST(req: Request) {
         content,
         direction: "OUTBOUND",
         senderId: user.id,
+        status: messageStatus,
       }
     });
 

@@ -28,6 +28,7 @@ type Message = {
   direction: string;
   content: string;
   time: string;
+  status?: string;
 };
 
 type Team = {
@@ -145,6 +146,7 @@ export default function ChatPage() {
       id: Date.now().toString(),
       direction: 'OUTBOUND',
       content,
+      status: 'sending',
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
     setMessages(prev => [...prev, tempMsg]);
@@ -289,7 +291,20 @@ export default function ChatPage() {
                   className={`${styles.message} ${msg.direction === 'INBOUND' ? styles.messageInbound : styles.messageOutbound}`}
                 >
                   {msg.content}
-                  <div className={styles.messageTime}>{msg.time}</div>
+                  <div className={styles.messageTime}>
+                    {msg.time}
+                    {msg.direction === 'OUTBOUND' && (
+                      <span style={{ marginLeft: 4, fontSize: '12px' }}>
+                        {msg.status === 'FAILED' ? (
+                          <span title="Erro ao enviar na API. Verifique os logs." style={{ cursor: 'pointer' }}>ℹ️</span>
+                        ) : msg.status === 'sending' ? (
+                          <span style={{ color: '#9ca3af' }}>⏳</span>
+                        ) : (
+                          <span style={{ color: '#34b7f1' }}>✓✓</span>
+                        )}
+                      </span>
+                    )}
+                  </div>
                 </div>
               ))}
               <div ref={messagesEndRef} />
