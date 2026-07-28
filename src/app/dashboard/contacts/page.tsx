@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import styles from './contacts.module.css';
 
@@ -13,14 +13,31 @@ type Contact = {
   status: string;
 };
 
+type ContactList = {
+  id: string;
+  name: string;
+  teamId: string | null;
+  team: { id: string; name: string } | null;
+  _count: { contacts: number };
+};
+
 export default function ContactsPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [lists, setLists] = useState<ContactList[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
+  // Layout State
+  const [selectedListId, setSelectedListId] = useState<string>('ALL');
+  const [sidebarSearch, setSidebarSearch] = useState('');
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   // Mapping Modal State
   const [isMappingModalOpen, setIsMappingModalOpen] = useState(false);
   const [csvData, setCsvData] = useState<string[][]>([]);
@@ -39,13 +56,14 @@ export default function ContactsPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const fetchContacts = async () => {
+  const fetchContacts = async (listId: string) => {
     setLoading(true);
     try {
-      const res = await fetch('/api/contacts');
+      const res = await fetch(`/api/contacts?listId=${listId}`);
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
       setContacts(data);
+      setCurrentPage(1);
     } catch (err) {
       showToast('Erro ao carregar contatos', 'error');
     } finally {
@@ -53,10 +71,17 @@ export default function ContactsPage() {
     }
   };
 
-  useEffect(() => {
-    fetchContacts();
-    fetchTeams();
-  }, []);
+  const fetchLists = async () => {
+    try {
+      const res = await fetch('/api/lists');
+      if (res.ok) {
+        const data = await res.json();
+        setLists(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch lists', err);
+    }
+  };
 
   const fetchTeams = async () => {
     try {
@@ -69,6 +94,15 @@ export default function ContactsPage() {
       console.error('Failed to fetch teams', err);
     }
   };
+
+  useEffect(() => {
+    fetchTeams();
+    fetchLists();
+  }, []);
+
+  useEffect(() => {
+    fetchContacts(selectedListId);
+  }, [selectedListId]);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -86,6 +120,7 @@ export default function ContactsPage() {
       if (!res.ok) throw new Error();
       setContacts(contacts.filter(c => c.id !== id));
       showToast('Contato excluído com sucesso', 'success');
+      fetchLists(); // Update counts
     } catch {
       showToast('Erro ao excluir contato', 'error');
     }
@@ -105,7 +140,9 @@ export default function ContactsPage() {
       });
       if (!res.ok) throw new Error();
       const newContact = await res.json();
-      setContacts([newContact, ...contacts]);
+      if (selectedListId === 'ALL') {
+        setContacts([newContact, ...contacts]);
+      }
       setIsModalOpen(false);
       setNewName('');
       setNewPhone('');
@@ -128,7 +165,6 @@ export default function ContactsPage() {
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
         
-        // Convert to array of arrays, defalval: '' ensures empty cells aren't skipped
         const rows: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
         
         if (rows.length < 2) {
@@ -155,7 +191,6 @@ export default function ContactsPage() {
 
         setCsvHeaders(headers);
         setCsvSampleData(sample);
-        // Save the rest of the rows, converting all cells to string
         const dataRows = rows.slice(1).filter(r => r.some(c => c !== '')).map(r => r.map(String));
         setCsvData(dataRows);
         setMappedPhone(phoneIdx);
@@ -194,7 +229,7 @@ export default function ContactsPage() {
       });
 
       return { phone, name, attributes };
-    }).filter(c => c.phone); // Require phone
+    }).filter(c => c.phone);
 
     try {
       const res = await fetch('/api/contacts/bulk', {
@@ -206,20 +241,53 @@ export default function ContactsPage() {
       if (!res.ok) throw new Error();
       const result = await res.json();
       showToast(`${result.imported} contatos importados/atualizados com sucesso.`, 'success');
-      fetchContacts();
+      fetchContacts(selectedListId);
+      fetchLists();
     } catch {
       showToast('Erro ao importar contatos', 'error');
       setLoading(false);
     }
   };
 
-  const filteredContacts = contacts.filter(c => {
-    const matchesStatus = filterStatus === 'ALL' || c.status === filterStatus;
-    const matchesSearch = 
-      (c.name?.toLowerCase().includes(searchQuery.toLowerCase()) || '') ||
-      c.phone.includes(searchQuery);
-    return matchesStatus && matchesSearch;
-  });
+  const filteredContacts = useMemo(() => {
+    return contacts.filter(c => {
+      const matchesStatus = filterStatus === 'ALL' || c.status === filterStatus;
+      const matchesSearch = 
+        (c.name?.toLowerCase().includes(searchQuery.toLowerCase()) || '') ||
+        c.phone.includes(searchQuery);
+      return matchesStatus && matchesSearch;
+    });
+  }, [contacts, filterStatus, searchQuery]);
+
+  const paginatedContacts = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredContacts.slice(start, start + itemsPerPage);
+  }, [filteredContacts, currentPage]);
+
+  const totalPages = Math.ceil(filteredContacts.length / itemsPerPage);
+
+  const groupedLists = useMemo(() => {
+    const groups: { [key: string]: { name: string; lists: ContactList[] } } = {
+      UNASSIGNED: { name: 'Importações Avulsas', lists: [] }
+    };
+
+    lists.forEach(list => {
+      if (!list.name.toLowerCase().includes(sidebarSearch.toLowerCase())) return;
+
+      if (list.teamId && list.team) {
+        if (!groups[list.teamId]) {
+          groups[list.teamId] = { name: list.team.name, lists: [] };
+        }
+        groups[list.teamId].lists.push(list);
+      } else {
+        groups.UNASSIGNED.lists.push(list);
+      }
+    });
+
+    return groups;
+  }, [lists, sidebarSearch]);
+
+  const totalContacts = lists.reduce((acc, l) => acc + (l._count?.contacts || 0), 0);
 
   return (
     <div className={styles.container}>
@@ -248,96 +316,176 @@ export default function ContactsPage() {
               <polyline points="17 8 12 3 7 8"></polyline>
               <line x1="12" y1="3" x2="12" y2="15"></line>
             </svg>
-            Importar Planilha (XLSX/CSV)
+            Importar Planilha
           </button>
           <button className={styles.buttonPrimary} onClick={() => setIsModalOpen(true)}>+ Novo Contato</button>
         </div>
       </div>
 
-      <div className={styles.filters}>
-        <input 
-          type="text" 
-          placeholder="Buscar por nome ou telefone..." 
-          className={styles.filterInput} 
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-        <select 
-          className={styles.filterSelect}
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-        >
-          <option value="ALL">Todos os Status</option>
-          <option value="ACTIVE">Ativos</option>
-          <option value="EXCEPTION">Exceções (Números Inválidos)</option>
-        </select>
-      </div>
-
-      <div className={styles.tableContainer}>
-        {loading ? (
-          <div className={styles.loadingContainer}>
-            <div className={styles.spinner}></div>
-            <p>Carregando...</p>
+      <div className={styles.layout}>
+        <div className={styles.sidebar}>
+          <input 
+            type="text" 
+            placeholder="Buscar listas..." 
+            className={styles.sidebarSearch}
+            value={sidebarSearch}
+            onChange={e => setSidebarSearch(e.target.value)}
+          />
+          
+          <div 
+            className={`${styles.listItem} ${selectedListId === 'ALL' ? styles.listItemSelected : ''}`}
+            onClick={() => setSelectedListId('ALL')}
+          >
+            <span>Todos os Contatos</span>
+            <span className={styles.listCount}>{totalContacts}</span>
           </div>
-        ) : (
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th className={styles.th}>Nome</th>
-                <th className={styles.th}>Telefone</th>
-                <th className={styles.th}>Campos Dinâmicos</th>
-                <th className={styles.th}>Status</th>
-                <th className={styles.th}>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredContacts.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className={styles.emptyState}>Nenhum contato encontrado.</td>
-                </tr>
-              ) : (
-                filteredContacts.map(contact => {
-                  let attributesObj = {};
-                  try {
-                    attributesObj = contact.attributes ? JSON.parse(contact.attributes) : {};
-                  } catch (e) {}
 
-                  return (
-                    <tr key={contact.id} className={styles.tr}>
-                      <td className={styles.td} style={{ fontWeight: 500, color: '#fff' }}>{contact.name || '-'}</td>
-                      <td className={styles.td}>{contact.phone}</td>
-                      <td className={styles.td}>
-                        {Object.entries(attributesObj).map(([key, value]) => (
-                          <span key={key} className={styles.dynamicField}>
-                            {key}: {String(value)}
-                          </span>
-                        ))}
-                      </td>
-                      <td className={styles.td}>
-                        {contact.status === 'ACTIVE' 
-                          ? <span className={`${styles.statusBadge} ${styles.statusActive}`}>ATIVO</span>
-                          : <span className={`${styles.statusBadge} ${styles.statusException}`}>EXCEÇÃO</span>
-                        }
-                      </td>
-                      <td className={styles.td}>
-                        <button className={styles.iconButton} onClick={() => handleDelete(contact.id)} title="Excluir">
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                            <line x1="10" y1="11" x2="10" y2="17"></line>
-                            <line x1="14" y1="11" x2="14" y2="17"></line>
-                          </svg>
-                        </button>
-                      </td>
+          <div style={{ flex: 1, overflowY: 'auto', marginTop: 12 }}>
+            {Object.entries(groupedLists).map(([id, group]) => {
+              if (group.lists.length === 0) return null;
+              return (
+                <div key={id} className={styles.teamGroup}>
+                  <div className={styles.teamName}>{group.name}</div>
+                  {group.lists.map(list => (
+                    <div 
+                      key={list.id} 
+                      className={`${styles.listItem} ${selectedListId === list.id ? styles.listItemSelected : ''}`}
+                      onClick={() => setSelectedListId(list.id)}
+                    >
+                      <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }} title={list.name}>
+                        {list.name}
+                      </span>
+                      <span className={styles.listCount}>{list._count?.contacts || 0}</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className={styles.mainContent}>
+          <div className={styles.filters}>
+            <input 
+              type="text" 
+              placeholder="Buscar por nome ou telefone..." 
+              className={styles.filterInput} 
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+            <select 
+              className={styles.filterSelect}
+              value={filterStatus}
+              onChange={(e) => {
+                setFilterStatus(e.target.value);
+                setCurrentPage(1);
+              }}
+            >
+              <option value="ALL">Todos os Status</option>
+              <option value="ACTIVE">Ativos</option>
+              <option value="EXCEPTION">Exceções (Inválidos)</option>
+            </select>
+          </div>
+
+          <div className={styles.tableContainer}>
+            {loading ? (
+              <div className={styles.loadingContainer}>
+                <div className={styles.spinner}></div>
+                <p>Carregando...</p>
+              </div>
+            ) : (
+              <>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th className={styles.th} style={{ width: '40px' }}>
+                        <input type="checkbox" className={styles.checkbox} />
+                      </th>
+                      <th className={styles.th}>Nome</th>
+                      <th className={styles.th}>Telefone</th>
+                      <th className={styles.th}>Campos Dinâmicos</th>
+                      <th className={styles.th}>Status</th>
+                      <th className={styles.th}>Ações</th>
                     </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        )}
+                  </thead>
+                  <tbody>
+                    {paginatedContacts.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className={styles.emptyState}>Nenhum contato encontrado.</td>
+                      </tr>
+                    ) : (
+                      paginatedContacts.map(contact => {
+                        let attributesObj = {};
+                        try {
+                          attributesObj = contact.attributes ? JSON.parse(contact.attributes) : {};
+                        } catch (e) {}
+
+                        return (
+                          <tr key={contact.id} className={styles.tr}>
+                            <td className={styles.td}>
+                              <input type="checkbox" className={styles.checkbox} />
+                            </td>
+                            <td className={styles.td} style={{ fontWeight: 500, color: '#fff' }}>{contact.name || '-'}</td>
+                            <td className={styles.td}>{contact.phone}</td>
+                            <td className={styles.td}>
+                              {Object.entries(attributesObj).map(([key, value]) => (
+                                <span key={key} className={styles.dynamicField}>
+                                  {key}: {String(value)}
+                                </span>
+                              ))}
+                            </td>
+                            <td className={styles.td}>
+                              {contact.status === 'ACTIVE' 
+                                ? <span className={`${styles.statusBadge} ${styles.statusActive}`}>ATIVO</span>
+                                : <span className={`${styles.statusBadge} ${styles.statusException}`}>EXCEÇÃO</span>
+                              }
+                            </td>
+                            <td className={styles.td}>
+                              <button className={styles.iconButton} onClick={() => handleDelete(contact.id)} title="Excluir">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="3 6 5 6 21 6"></polyline>
+                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                  <line x1="10" y1="11" x2="10" y2="17"></line>
+                                  <line x1="14" y1="11" x2="14" y2="17"></line>
+                                </svg>
+                              </button>
+                            </td>
+                          </tr>
+                        )
+                      })
+                    )}
+                  </tbody>
+                </table>
+                <div className={styles.pagination}>
+                  <span>Mostrando {paginatedContacts.length} de {filteredContacts.length} contatos</span>
+                  <div className={styles.paginationControls}>
+                    <button 
+                      className={styles.pageButton} 
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Anterior
+                    </button>
+                    <span>{currentPage} / {Math.max(1, totalPages)}</span>
+                    <button 
+                      className={styles.pageButton} 
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages || totalPages === 0}
+                    >
+                      Próxima
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
+      {/* CREATE MODAL */}
       {isModalOpen && (
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>
@@ -376,6 +524,7 @@ export default function ContactsPage() {
         </div>
       )}
 
+      {/* MAPPING MODAL */}
       {isMappingModalOpen && (
         <div className={styles.modalOverlay}>
           <div className={`${styles.modal} ${styles.mappingModal}`}>
@@ -505,8 +654,8 @@ export default function ContactsPage() {
                </button>
             </div>
             <div className={styles.modalFooter}>
-              <button className={styles.buttonSecondary} onClick={() => setIsMappingModalOpen(false)}>Cancelar</button>
-              <button className={styles.buttonPrimary} onClick={handleConfirmImport}>Confirmar Importação</button>
+               <button className={styles.buttonSecondary} onClick={() => setIsMappingModalOpen(false)}>Cancelar</button>
+               <button className={styles.buttonPrimary} onClick={handleConfirmImport}>Confirmar Importação</button>
             </div>
           </div>
         </div>
@@ -514,4 +663,3 @@ export default function ContactsPage() {
     </div>
   );
 }
-

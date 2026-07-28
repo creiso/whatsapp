@@ -5,6 +5,10 @@ export async function GET() {
   try {
     const lists = await prisma.contactList.findMany({
       orderBy: { createdAt: "desc" },
+      include: {
+        _count: { select: { contacts: true } },
+        team: { select: { id: true, name: true } },
+      }
     });
     return NextResponse.json(lists);
   } catch (error) {

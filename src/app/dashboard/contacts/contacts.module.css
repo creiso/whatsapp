@@ -1,7 +1,35 @@
+.layout {
+  display: flex;
+  gap: 24px;
+  height: calc(100vh - 120px);
+}
+
+.sidebar {
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: rgba(26, 29, 36, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.mainContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  overflow-y: auto;
+}
+
 .container {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  height: 100%;
 }
 
 .header {
@@ -149,6 +177,93 @@
   margin-right: 4px;
 }
 
+.checkbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid var(--surface-border);
+  background: rgba(0,0,0,0.2);
+  cursor: pointer;
+}
+.checkbox:checked {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid var(--surface-border);
+  color: #9ca3af;
+  font-size: 14px;
+}
+.paginationControls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.pageButton {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--surface-border);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.pageButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sidebarSearch {
+  background: rgba(0,0,0,0.2);
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #fff;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 14px;
+}
+
+.teamGroup {
+  margin-bottom: 12px;
+}
+.teamName {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  padding-left: 8px;
+}
+.listItem {
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #e5e7eb;
+  font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.2s;
+}
+.listItem:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.listItemSelected {
+  background: rgba(255, 255, 255, 0.1);
+  font-weight: 500;
+}
+.listCount {
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 10px;
+}
 /* New Styles Added */
 .iconButton {
   background: transparent;

@@ -3,7 +3,16 @@ import prisma from "@/lib/prisma";
 
 export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const listId = searchParams.get('listId');
+    
+    let where = {};
+    if (listId && listId !== 'ALL') {
+      where = { lists: { some: { id: listId } } };
+    }
+
     const contacts = await prisma.contact.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
     });
     return NextResponse.json(contacts);
