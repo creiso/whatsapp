@@ -47,6 +47,12 @@ export async function POST(
         { status: 400 }
       );
     }
+    
+    // Fetch template language
+    const metaTemplate = await prisma.metaTemplate.findUnique({
+      where: { name: campaign.template }
+    });
+    const templateLanguage = metaTemplate?.language || "pt_BR";
 
     // Mark as running before sending (optional but good practice)
     await prisma.campaign.update({
@@ -74,7 +80,7 @@ export async function POST(
             type: "template",
             template: {
               name: campaign.template,
-              language: { code: "pt_BR" },
+              language: { code: templateLanguage },
             },
           }),
         });
