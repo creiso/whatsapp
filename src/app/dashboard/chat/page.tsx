@@ -47,6 +47,7 @@ export default function ChatPage() {
   const [inputText, setInputText] = useState('');
   const [filter, setFilter] = useState<'triagem' | 'team'>('triagem');
   const [teams, setTeams] = useState<Team[]>([]);
+  const [users, setUsers] = useState<UserData[]>([]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -61,7 +62,7 @@ export default function ChatPage() {
     }
   }, [session]);
 
-  // Fetch teams
+  // Fetch teams and users
   useEffect(() => {
     if (currentUser) {
       fetch('/api/teams')
@@ -69,6 +70,14 @@ export default function ChatPage() {
         .then(data => {
           if (!data.error) setTeams(data);
         });
+
+      if (currentUser.role === 'ADMIN') {
+        fetch('/api/users')
+          .then(res => res.json())
+          .then(data => {
+            if (!data.error) setUsers(data);
+          });
+      }
     }
   }, [currentUser]);
 
@@ -167,13 +176,13 @@ export default function ChatPage() {
     }
   };
 
-  const handleTransfer = async (teamId: string | null) => {
+  const handleTransfer = async (teamId: string | null, lockedById?: string | null) => {
     if (!activeConversation) return;
     try {
       const res = await fetch(`/api/contacts/${activeConversation.contactId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamId })
+        body: JSON.stringify({ teamId, lockedById })
       });
       if (res.ok) {
         // Remove from list or refresh
@@ -273,13 +282,29 @@ export default function ChatPage() {
                   <select 
                     style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid var(--surface-border)', padding: '6px', borderRadius: '4px' }}
                     value={activeConversation.teamId || ''}
-                    onChange={(e) => handleTransfer(e.target.value || null)}
+                    onChange={(e) => handleTransfer(e.target.value || null, activeConversation.lockedById)}
                   >
                     <option value="">Triagem (Sem Equipe)</option>
                     {teams.map(t => (
                       <option key={t.id} value={t.id}>{t.name}</option>
                     ))}
                   </select>
+                  
+                  {currentUser?.role === 'ADMIN' && (
+                    <>
+                      <span style={{ fontSize: '13px', color: '#9ca3af', marginLeft: '12px' }}>Atribuir ao Agente:</span>
+                      <select 
+                        style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid var(--surface-border)', padding: '6px', borderRadius: '4px' }}
+                        value={activeConversation.lockedById || ''}
+                        onChange={(e) => handleTransfer(activeConversation.teamId, e.target.value || null)}
+                      >
+                        <option value="">Nenhum Agente</option>
+                        {users.map(u => (
+                          <option key={u.id} value={u.id}>{u.email}</option>
+                        ))}
+                      </select>
+                    </>
+                  )}
                 </div>
               )}
             </div>

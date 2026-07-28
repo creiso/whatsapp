@@ -12,7 +12,10 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const filter = searchParams.get("filter") || "team"; // 'triagem' or 'team'
-  const teamId = searchParams.get("teamId") || null;
+  const requestedTeamId = searchParams.get("teamId") || null;
+  const sessionUser = session.user as any;
+  const userRole = sessionUser.role;
+  const userTeamId = sessionUser.teamId;
 
   try {
     let whereClause: any = {
@@ -22,10 +25,17 @@ export async function GET(req: Request) {
     if (filter === "triagem") {
       whereClause.contact = { teamId: null };
     } else if (filter === "team") {
-      // If team filter, get conversations for that team
-      // For Admin, it might not pass teamId, but let's assume if teamId is passed we filter by it.
-      if (teamId) {
-        whereClause.contact = { teamId: teamId };
+      if (userRole === "AGENT") {
+        if (!userTeamId) {
+          // If agent has no team, they can only see their locked conversations
+          whereClause.lockedById = sessionUser.id;
+        } else {
+          whereClause.contact = { teamId: userTeamId };
+        }
+      } else {
+        if (requestedTeamId) {
+          whereClause.contact = { teamId: requestedTeamId };
+        }
       }
     }
 
@@ -50,7 +60,7 @@ export async function GET(req: Request) {
         contactId: conv.contact.id,
         lastMessage: lastMessage?.content || "Nenhuma mensagem",
         time: lastMessage ? new Date(lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "",
-        lockedBy: conv.lockedBy?.email || null,
+        lockedBy: conv.lockedBy?.name || conv.lockedBy?.email || null,
         lockedById: conv.lockedById,
         teamId: conv.contact.teamId,
       };

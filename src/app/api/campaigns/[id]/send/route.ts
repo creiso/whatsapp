@@ -126,6 +126,13 @@ export async function POST(
           exceptionsList.push({ phone: contact.phone, name: contact.name, error: errData });
         } else {
           sentCount++;
+          // Update contact with campaign's teamId
+          if (campaign.teamId) {
+            await prisma.contact.update({
+              where: { id: contact.id },
+              data: { teamId: campaign.teamId }
+            });
+          }
           // Salvar no feed de mensagens
           let conv = await prisma.conversation.findFirst({
             where: { contactId: contact.id, status: "OPEN" }

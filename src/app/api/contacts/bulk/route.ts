@@ -4,18 +4,23 @@ import prisma from "@/lib/prisma";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { listName, contacts } = body;
+    const { listName, contacts, teamId } = body;
     
     if (!Array.isArray(contacts)) {
-      return NextResponse.json({ error: "Invalid payload format. Expected { listName?: string, contacts: any[] }" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid payload format. Expected { listName?: string, contacts: any[], teamId?: string }" }, { status: 400 });
     }
 
     let list = null;
     if (listName) {
       list = await prisma.contactList.upsert({
         where: { name: listName },
-        update: {},
-        create: { name: listName },
+        update: {
+          ...(teamId ? { teamId } : {})
+        },
+        create: { 
+          name: listName,
+          ...(teamId ? { teamId } : {})
+        },
       });
     }
 
@@ -32,6 +37,7 @@ export async function POST(req: Request) {
         update: {
           name: contact.name || undefined,
           attributes: attrsStr || undefined,
+          ...(teamId ? { teamId } : {}),
           ...(list ? { lists: { connect: { id: list.id } } } : {}),
         },
         create: {
@@ -39,6 +45,7 @@ export async function POST(req: Request) {
           name: contact.name || null,
           attributes: attrsStr,
           status: 'ACTIVE',
+          ...(teamId ? { teamId } : {}),
           ...(list ? { lists: { connect: { id: list.id } } } : {}),
         },
       });

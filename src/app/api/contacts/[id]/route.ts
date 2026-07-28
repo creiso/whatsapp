@@ -16,13 +16,20 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   }
 
   try {
-    const { teamId } = await req.json();
+    const { teamId, lockedById } = await req.json();
     const resolvedParams = await params;
 
     const contact = await prisma.contact.update({
       where: { id: resolvedParams.id },
       data: { teamId: teamId === "" ? null : teamId }
     });
+
+    if (lockedById !== undefined) {
+      await prisma.conversation.updateMany({
+        where: { contactId: resolvedParams.id, status: 'OPEN' },
+        data: { lockedById: lockedById === "" ? null : lockedById }
+      });
+    }
 
     return NextResponse.json(contact);
   } catch (error: any) {

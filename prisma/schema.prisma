@@ -27,6 +27,8 @@ model Team {
   name      String
   users     User[]
   contacts  Contact[]
+  campaigns Campaign[]
+  lists     ContactList[]
 }
 
 model Contact {
@@ -48,8 +50,9 @@ model ContactList {
   createdAt DateTime  @default(now())
   contacts  Contact[]
   campaigns Campaign[]
+  teamId    String?
+  team      Team?     @relation(fields: [teamId], references: [id])
 }
-
 
 model Campaign {
   id        String   @id @default(cuid())
@@ -58,6 +61,8 @@ model Campaign {
   template  String
   listId    String
   list      ContactList @relation(fields: [listId], references: [id])
+  teamId    String?
+  team      Team?       @relation(fields: [teamId], references: [id])
   variablesRecord String?
   exceptionsRecord String?
   createdAt DateTime @default(now())

@@ -7,13 +7,14 @@ export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [lists, setLists] = useState<any[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
+  const [teams, setTeams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isExceptionsModalOpen, setIsExceptionsModalOpen] = useState(false);
   const [selectedExceptions, setSelectedExceptions] = useState<any[]>([]);
-  const [newCampaign, setNewCampaign] = useState({ name: '', template: '', listId: '' });
+  const [newCampaign, setNewCampaign] = useState({ name: '', template: '', listId: '', teamId: '' });
   const [variablesMapping, setVariablesMapping] = useState<Record<string, { type: string, value: string }>>({});
   const [requiredVariables, setRequiredVariables] = useState<{ key: string, componentType: string, varNum: string }[]>([]);
   
@@ -73,8 +74,20 @@ export default function CampaignsPage() {
     }
   };
 
+  const fetchTeams = async () => {
+    try {
+      const res = await fetch('/api/teams');
+      if (res.ok) {
+        const data = await res.json();
+        setTeams(data);
+      }
+    } catch (error) {
+      console.error('Error fetching teams', error);
+    }
+  };
+
   useEffect(() => {
-    Promise.all([fetchCampaigns(), fetchLists(), fetchTemplates()]).finally(() => setLoading(false));
+    Promise.all([fetchCampaigns(), fetchLists(), fetchTemplates(), fetchTeams()]).finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -129,7 +142,7 @@ export default function CampaignsPage() {
       if (res.ok) {
         showToast('Campanha criada com sucesso!', 'success');
         setIsModalOpen(false);
-        setNewCampaign({ name: '', template: '', listId: '' });
+        setNewCampaign({ name: '', template: '', listId: '', teamId: '' });
         setVariablesMapping({});
         fetchCampaigns();
       } else {
@@ -350,6 +363,20 @@ export default function CampaignsPage() {
                   <option value="">Selecione uma lista</option>
                   {lists.map(list => (
                     <option key={list.id} value={list.id}>{list.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className={styles.formGroup}>
+                <label>Equipe</label>
+                <select 
+                  value={newCampaign.teamId} 
+                  onChange={e => setNewCampaign({...newCampaign, teamId: e.target.value})}
+                  required
+                  className={styles.select}
+                >
+                  <option value="">Selecione uma equipe</option>
+                  {teams.map(team => (
+                    <option key={team.id} value={team.id}>{team.name}</option>
                   ))}
                 </select>
               </div>

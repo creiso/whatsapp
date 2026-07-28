@@ -30,6 +30,8 @@ export default function ContactsPage() {
   const [mappedName, setMappedName] = useState<string>('');
   const [mappedCustom, setMappedCustom] = useState<{key: string, index: string}[]>([]);
   const [listName, setListName] = useState<string>('');
+  const [importTeamId, setImportTeamId] = useState<string>('');
+  const [teams, setTeams] = useState<any[]>([]);
 
   // Modal Form State
   const [newName, setNewName] = useState('');
@@ -53,7 +55,20 @@ export default function ContactsPage() {
 
   useEffect(() => {
     fetchContacts();
+    fetchTeams();
   }, []);
+
+  const fetchTeams = async () => {
+    try {
+      const res = await fetch('/api/teams');
+      if (res.ok) {
+        const data = await res.json();
+        setTeams(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch teams', err);
+    }
+  };
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -185,7 +200,7 @@ export default function ContactsPage() {
       const res = await fetch('/api/contacts/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ listName, contacts: payload }),
+        body: JSON.stringify({ listName, contacts: payload, teamId: importTeamId }),
       });
 
       if (!res.ok) throw new Error();
@@ -377,6 +392,19 @@ export default function ContactsPage() {
                 onChange={(e) => setListName(e.target.value)}
                 placeholder="Ex: Leads Campanha X"
               />
+            </div>
+            <div className={styles.formGroup} style={{ padding: '0 24px', marginTop: '8px' }}>
+              <label className={styles.label}>Equipe (Opcional)</label>
+              <select 
+                className={styles.input} 
+                value={importTeamId}
+                onChange={(e) => setImportTeamId(e.target.value)}
+              >
+                <option value="">Sem Equipe</option>
+                {teams.map(team => (
+                  <option key={team.id} value={team.id}>{team.name}</option>
+                ))}
+              </select>
             </div>
             <div className={styles.tableContainer} style={{ marginBottom: '24px' }}>
               <table className={styles.table}>
