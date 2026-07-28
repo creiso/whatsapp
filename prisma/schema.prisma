@@ -59,6 +59,11 @@ model Campaign {
   listId    String
   list      ContactList @relation(fields: [listId], references: [id])
   createdAt DateTime @default(now())
+  
+  sent      Int      @default(0)
+  total     Int      @default(0)
+  delivered Int      @default(0)
+  errors    Int      @default(0)
 }
 
 model Conversation {

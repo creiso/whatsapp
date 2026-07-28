@@ -11,7 +11,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   }
 
   const user = await prisma.user.findUnique({ where: { email: session.user.email } });
-  if (user?.role !== "ADMIN") {
+  if (!user) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

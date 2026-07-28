@@ -35,13 +35,44 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     
-    // Opcional: futuramente implementar a lógica de processar mensagens aqui
     console.log('Mensagem recebida do Webhook:', JSON.stringify(body, null, 2));
+    
+    if (body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]) {
+      const message = body.entry[0].changes[0].value.messages[0];
+      const from = message.from;
+      const textBody = message.text?.body;
+      
+      if (from && textBody) {
+        const contact = await prisma.contact.upsert({
+          where: { phone: from },
+          update: {},
+          create: { phone: from, name: from }
+        });
+
+        let conv = await prisma.conversation.findFirst({
+          where: { contactId: contact.id, status: "OPEN" }
+        });
+
+        if (!conv) {
+          conv = await prisma.conversation.create({
+            data: { contactId: contact.id }
+          });
+        }
+
+        await prisma.message.create({
+          data: {
+            conversationId: conv.id,
+            content: textBody,
+            direction: "INBOUND"
+          }
+        });
+      }
+    }
     
     // É obrigatório responder 200 OK rapidamente para a Meta
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
     console.error('Erro ao processar Webhook POST:', error);
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
+    return NextResponse.json({ success: true }, { status: 200 }); // Always return 200 for Meta
   }
 }

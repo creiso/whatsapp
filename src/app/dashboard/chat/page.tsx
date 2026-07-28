@@ -60,9 +60,9 @@ export default function ChatPage() {
     }
   }, [session]);
 
-  // Fetch teams if admin
+  // Fetch teams
   useEffect(() => {
-    if (currentUser?.role === 'ADMIN') {
+    if (currentUser) {
       fetch('/api/teams')
         .then(res => res.json())
         .then(data => {
@@ -164,7 +164,7 @@ export default function ChatPage() {
     }
   };
 
-  const handleTransfer = async (teamId: string) => {
+  const handleTransfer = async (teamId: string | null) => {
     if (!activeConversation) return;
     try {
       const res = await fetch(`/api/contacts/${activeConversation.contactId}`, {
@@ -264,13 +264,13 @@ export default function ChatPage() {
                 </div>
               </div>
 
-              {currentUser?.role === 'ADMIN' && (
+              {(currentUser?.role === 'ADMIN' || activeConversation.teamId === null) && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '13px', color: '#9ca3af' }}>Transferir:</span>
+                  <span style={{ fontSize: '13px', color: '#9ca3af' }}>Atribuir à Equipe:</span>
                   <select 
                     style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid var(--surface-border)', padding: '6px', borderRadius: '4px' }}
                     value={activeConversation.teamId || ''}
-                    onChange={(e) => handleTransfer(e.target.value)}
+                    onChange={(e) => handleTransfer(e.target.value || null)}
                   >
                     <option value="">Triagem (Sem Equipe)</option>
                     {teams.map(t => (

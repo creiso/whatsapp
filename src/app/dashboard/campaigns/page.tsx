@@ -102,6 +102,25 @@ export default function CampaignsPage() {
     }
   };
 
+  const handleStartCampaign = async (id: string) => {
+    try {
+      showToast('Iniciando disparo...', 'success');
+      const res = await fetch(`/api/campaigns/${id}/send`, {
+        method: 'POST',
+      });
+      if (res.ok) {
+        showToast('Disparo concluído!', 'success');
+        fetchCampaigns();
+      } else {
+        const data = await res.json();
+        showToast(data.error || 'Erro ao iniciar campanha', 'error');
+        fetchCampaigns();
+      }
+    } catch (error) {
+      showToast('Erro ao iniciar campanha', 'error');
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'RUNNING':
@@ -150,6 +169,18 @@ export default function CampaignsPage() {
                 <div className={styles.campaignName}>{campaign.name}</div>
                 {getStatusBadge(campaign.status)}
               </div>
+
+              {campaign.status === 'DRAFT' && (
+                <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+                  <button 
+                    className={styles.buttonPrimary} 
+                    style={{ width: '100%', padding: '0.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}
+                    onClick={() => handleStartCampaign(campaign.id)}
+                  >
+                    ▶ Iniciar Disparo
+                  </button>
+                </div>
+              )}
 
               <div className={styles.statsRow}>
                 <div className={styles.stat}>

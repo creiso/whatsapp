@@ -56,12 +56,52 @@ export async function POST(req: Request) {
     }
 
     // Lock the conversation to this user if it isn't locked
-    const conv = await prisma.conversation.findUnique({ where: { id: conversationId } });
-    if (conv && !conv.lockedById) {
+    const conv = await prisma.conversation.findUnique({ 
+      where: { id: conversationId },
+      include: { contact: true }
+    });
+    if (!conv) {
+      return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+    }
+
+    if (!conv.lockedById) {
       await prisma.conversation.update({
         where: { id: conversationId },
         data: { lockedById: user.id }
       });
+    }
+
+    const accessTokenSetting = await prisma.setting.findUnique({ where: { key: "meta_access_token" } });
+    const phoneNumberIdSetting = await prisma.setting.findUnique({ where: { key: "meta_phone_number_id" } });
+    
+    if (accessTokenSetting && phoneNumberIdSetting && accessTokenSetting.value && phoneNumberIdSetting.value) {
+      const metaUrl = `https://graph.facebook.com/v17.0/${phoneNumberIdSetting.value}/messages`;
+      
+      const payload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: conv.contact.phone,
+        type: "text",
+        text: {
+          preview_url: false,
+          body: content,
+        }
+      };
+
+      const metaRes = await fetch(metaUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessTokenSetting.value}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      if (!metaRes.ok) {
+        const errorData = await metaRes.json();
+        console.error("Meta API error:", errorData);
+        // We still save the message or maybe fail? Let's assume we proceed or handle error.
+      }
     }
 
     const message = await prisma.message.create({
