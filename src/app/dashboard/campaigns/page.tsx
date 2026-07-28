@@ -11,12 +11,25 @@ export default function CampaignsPage() {
   
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isExceptionsModalOpen, setIsExceptionsModalOpen] = useState(false);
+  const [selectedExceptions, setSelectedExceptions] = useState<any[]>([]);
   const [newCampaign, setNewCampaign] = useState({ name: '', template: '', listId: '' });
   const [variablesMapping, setVariablesMapping] = useState<Record<string, { type: string, value: string }>>({});
   const [requiredVariables, setRequiredVariables] = useState<{ key: string, componentType: string, varNum: string }[]>([]);
   
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showExceptions = (exceptionsRecord: string | null) => {
+    if (!exceptionsRecord) return;
+    try {
+      const parsed = JSON.parse(exceptionsRecord);
+      setSelectedExceptions(parsed);
+      setIsExceptionsModalOpen(true);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -235,9 +248,17 @@ export default function CampaignsPage() {
                   <span className={styles.statLabel}>ENTREGUES</span>
                   <span className={styles.statValue}>{campaign.delivered || 0}</span>
                 </div>
-                <div className={styles.stat}>
+                <div className={styles.stat} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <span className={styles.statLabel}>EXCEÇÕES</span>
                   <span className={`${styles.statValue} ${styles.statError}`}>{campaign.errors || 0}</span>
+                  {(campaign.errors > 0 && campaign.exceptionsRecord) && (
+                    <button 
+                      onClick={() => showExceptions(campaign.exceptionsRecord)}
+                      style={{ marginTop: '4px', fontSize: '11px', background: 'var(--error)', color: '#fff', border: 'none', borderRadius: '4px', padding: '2px 6px', cursor: 'pointer' }}
+                    >
+                      Ver Motivos
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -250,6 +271,38 @@ export default function CampaignsPage() {
           {campaigns.length === 0 && (
             <div className={styles.emptyState}>Nenhuma campanha encontrada.</div>
           )}
+        </div>
+      )}
+
+      {isExceptionsModalOpen && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal} style={{ maxWidth: '600px' }}>
+            <div className={styles.modalHeader}>
+              <h2>Lista de Exceções</h2>
+              <button className={styles.closeButton} onClick={() => setIsExceptionsModalOpen(false)}>×</button>
+            </div>
+            <div style={{ maxHeight: '400px', overflowY: 'auto', padding: '1rem' }}>
+              {selectedExceptions.length === 0 ? (
+                <p>Nenhuma exceção registrada.</p>
+              ) : (
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {selectedExceptions.map((exc, idx) => (
+                    <li key={idx} style={{ background: 'rgba(255,0,0,0.05)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,0,0,0.1)' }}>
+                      <div style={{ marginBottom: '8px' }}><strong>Contato:</strong> {exc.name || 'Desconhecido'} ({exc.phone})</div>
+                      <div style={{ fontSize: '13px', color: '#ef4444', background: '#fff', padding: '8px', borderRadius: '4px', fontFamily: 'monospace', overflowX: 'auto' }}>
+                        {typeof exc.error === 'object' ? JSON.stringify(exc.error, null, 2) : exc.error}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className={styles.modalActions}>
+              <button type="button" className={styles.buttonPrimary} onClick={() => setIsExceptionsModalOpen(false)}>
+                Fechar
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

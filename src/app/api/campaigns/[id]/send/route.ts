@@ -66,6 +66,7 @@ export async function POST(
     // Send messages in sequence to avoid rate limiting
     let sentCount = 0;
     let errorCount = 0;
+    const exceptionsList: any[] = [];
 
     for (const contact of contacts) {
       try {
@@ -122,6 +123,7 @@ export async function POST(
           const errData = await response.json();
           console.error("Failed to send message to", contact.phone, errData);
           errorCount++;
+          exceptionsList.push({ phone: contact.phone, name: contact.name, error: errData });
         } else {
           sentCount++;
           // Salvar no feed de mensagens
@@ -141,9 +143,10 @@ export async function POST(
             }
           });
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error sending to", contact.phone, err);
         errorCount++;
+        exceptionsList.push({ phone: contact.phone, name: contact.name, error: err.message || "Unknown error" });
       }
 
       // CRITICAL: wait 600ms between each request
@@ -157,7 +160,8 @@ export async function POST(
         status: "COMPLETED",
         sent: sentCount,
         errors: errorCount,
-        total: contacts.length
+        total: contacts.length,
+        exceptionsRecord: exceptionsList.length > 0 ? JSON.stringify(exceptionsList) : null
       },
     });
 
