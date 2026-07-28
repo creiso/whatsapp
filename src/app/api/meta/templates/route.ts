@@ -4,9 +4,6 @@ import prisma from "@/lib/prisma";
 export async function GET() {
   try {
     const templates = await prisma.metaTemplate.findMany({
-      where: {
-        status: "APPROVED",
-      },
       orderBy: {
         name: "asc",
       },

@@ -85,11 +85,12 @@ export default function ChatPage() {
       const data = await res.json();
       if (!data.error) {
         setConversations(data);
-        // Update active conversation reference
-        if (activeConversation) {
-          const updatedActive = data.find((c: Conversation) => c.id === activeConversation.id);
-          if (updatedActive) setActiveConversation(updatedActive);
-        }
+        // Update active conversation reference using functional state to avoid stale closures
+        setActiveConversation(prev => {
+          if (!prev) return prev;
+          const updatedActive = data.find((c: Conversation) => c.id === prev.id);
+          return updatedActive || prev;
+        });
       }
     } catch (e) {
       console.error(e);
