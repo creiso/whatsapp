@@ -106,8 +106,12 @@ export default function ContactsPage() {
     reader.onload = (event) => {
       const text = event.target?.result as string;
       if (text) {
-        // Basic CSV parsing
-        const rows = text.split('\n').map(row => row.split(',').map(c => c.trim()));
+        // Basic CSV parsing with delimiter detection
+        const lines = text.split('\n');
+        const firstLine = lines[0] || '';
+        const delimiter = firstLine.includes(';') ? ';' : ',';
+        const rows = lines.map(row => row.split(delimiter).map(c => c.trim()));
+        
         if (rows.length < 2) {
           showToast('O arquivo CSV deve conter pelo menos um cabeçalho e uma linha de dados', 'error');
           return;
