@@ -71,7 +71,7 @@ model Campaign {
 model Conversation {
   id        String   @id @default(cuid())
   contactId String
-  contact   Contact  @relation(fields: [contactId], references: [id])
+  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
   lockedById String?
   lockedBy  User?    @relation("LockedByAgent", fields: [lockedById], references: [id])
   status    String   @default("OPEN")
@@ -82,7 +82,7 @@ model Conversation {
 model Message {
   id             String   @id @default(cuid())
   conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   content        String
   direction      String   // INBOUND, OUTBOUND
   status         String?  @default("SENT")
