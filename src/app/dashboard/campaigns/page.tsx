@@ -12,6 +12,8 @@ export default function CampaignsPage() {
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newCampaign, setNewCampaign] = useState({ name: '', template: '', listId: '' });
+  const [variablesMapping, setVariablesMapping] = useState<Record<string, { type: string, value: string }>>({});
+  const [requiredVariables, setRequiredVariables] = useState<{ key: string, componentType: string, varNum: string }[]>([]);
   
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -62,18 +64,60 @@ export default function CampaignsPage() {
     Promise.all([fetchCampaigns(), fetchLists(), fetchTemplates()]).finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    if (newCampaign.template) {
+      const template = templates.find((t: any) => t.name === newCampaign.template);
+      if (template && template.components) {
+        let parsedComponents = [];
+        try {
+          parsedComponents = typeof template.components === 'string' ? JSON.parse(template.components) : template.components;
+        } catch (e) {}
+
+        const vars: { key: string, componentType: string, varNum: string }[] = [];
+        const mapping: Record<string, { type: string, value: string }> = {};
+        parsedComponents.forEach((comp: any) => {
+          if (comp.text) {
+            const matches = comp.text.matchAll(/\{\{(\d+)\}\}/g);
+            for (const match of matches) {
+              const varNum = match[1];
+              const key = `${comp.type.toLowerCase()}_${varNum}`;
+              vars.push({ key, componentType: comp.type.toLowerCase(), varNum });
+              if (!variablesMapping[key]) {
+                mapping[key] = { type: 'name', value: '' };
+              } else {
+                mapping[key] = variablesMapping[key];
+              }
+            }
+          }
+        });
+        setRequiredVariables(vars);
+        setVariablesMapping(mapping);
+      } else {
+        setRequiredVariables([]);
+      }
+    } else {
+      setRequiredVariables([]);
+    }
+  }, [newCampaign.template, templates]);
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const payload = {
+        ...newCampaign,
+        variablesRecord: Object.keys(variablesMapping).length > 0 ? JSON.stringify(variablesMapping) : null
+      };
+      
       const res = await fetch('/api/campaigns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newCampaign),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         showToast('Campanha criada com sucesso!', 'success');
         setIsModalOpen(false);
         setNewCampaign({ name: '', template: '', listId: '' });
+        setVariablesMapping({});
         fetchCampaigns();
       } else {
         showToast('Erro ao criar campanha', 'error');
@@ -256,6 +300,43 @@ export default function CampaignsPage() {
                   ))}
                 </select>
               </div>
+              {requiredVariables.length > 0 && (
+                <div className={styles.formGroup}>
+                  <label>Mapeamento de Variáveis</label>
+                  {requiredVariables.map((v, i) => (
+                    <div key={`${v.key}-${i}`} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center' }}>
+                      <span style={{ minWidth: '80px', fontSize: '0.875rem' }}>{v.key}</span>
+                      <select 
+                        className={styles.select}
+                        value={variablesMapping[v.key]?.type || 'name'}
+                        onChange={(e) => setVariablesMapping({
+                          ...variablesMapping,
+                          [v.key]: { type: e.target.value, value: variablesMapping[v.key]?.value || '' }
+                        })}
+                        style={{ flex: 1 }}
+                      >
+                        <option value="name">Nome do Contato</option>
+                        <option value="phone">Telefone</option>
+                        <option value="custom">Campo Personalizado da Planilha</option>
+                        <option value="manual">Texto Fixo</option>
+                      </select>
+                      {(variablesMapping[v.key]?.type === 'custom' || variablesMapping[v.key]?.type === 'manual') && (
+                        <input
+                          type="text"
+                          className={styles.input}
+                          placeholder={variablesMapping[v.key]?.type === 'custom' ? 'Nome da Coluna' : 'Texto'}
+                          value={variablesMapping[v.key]?.value || ''}
+                          onChange={(e) => setVariablesMapping({
+                            ...variablesMapping,
+                            [v.key]: { ...variablesMapping[v.key], value: e.target.value }
+                          })}
+                          style={{ flex: 1 }}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className={styles.modalActions}>
                 <button type="button" className={styles.buttonSecondary} onClick={() => setIsModalOpen(false)}>
                   Cancelar

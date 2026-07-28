@@ -58,6 +58,7 @@ model Campaign {
   template  String
   listId    String
   list      ContactList @relation(fields: [listId], references: [id])
+  variablesRecord String?
   createdAt DateTime @default(now())
   
   sent      Int      @default(0)

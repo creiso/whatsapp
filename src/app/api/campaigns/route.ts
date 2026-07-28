@@ -16,7 +16,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const { name, template, listId } = await req.json();
+    const { name, template, listId, variablesRecord } = await req.json();
     if (!name || !template || !listId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
@@ -25,6 +25,7 @@ export async function POST(req: Request) {
         name,
         template,
         listId,
+        variablesRecord,
       },
     });
     return NextResponse.json(campaign);

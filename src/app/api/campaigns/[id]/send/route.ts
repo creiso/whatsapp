@@ -53,6 +53,7 @@ export async function POST(
       where: { name: campaign.template }
     });
     const templateLanguage = metaTemplate?.language || "pt_BR";
+    const varMapping = JSON.parse((campaign as any).variablesRecord || "{}");
 
     // Mark as running before sending (optional but good practice)
     await prisma.campaign.update({
@@ -68,6 +69,41 @@ export async function POST(
 
     for (const contact of contacts) {
       try {
+        const templateComponents = JSON.parse((metaTemplate as any)?.components || "[]");
+        const apiComponents = [];
+        for (const comp of templateComponents) {
+          const text = comp.text || "";
+          const matches = [...text.matchAll(/\{\{(\d+)\}\}/g)];
+          if (matches.length > 0) {
+            const parameters = [];
+            for (const match of matches) {
+              const varNum = match[1];
+              const map = varMapping[`${comp.type.toLowerCase()}_${varNum}`]; // e.g. body_1
+              let paramText = "";
+              if (map) {
+                if (map.type === "name") paramText = contact.name || "";
+                else if (map.type === "phone") paramText = contact.phone || "";
+                else if (map.type === "manual") paramText = map.value || "";
+                else if (map.type === "custom") {
+                  const attrs = JSON.parse((contact as any).attributes || "{}");
+                  paramText = attrs[map.value] || "";
+                }
+              }
+              parameters.push({ type: "text", text: paramText });
+            }
+            apiComponents.push({ type: comp.type.toLowerCase(), parameters });
+          }
+        }
+
+        const templatePayload: any = {
+          name: campaign.template,
+          language: { code: templateLanguage },
+        };
+        
+        if (apiComponents.length > 0) {
+          templatePayload.components = apiComponents;
+        }
+
         const response = await fetch(`https://graph.facebook.com/v21.0/${metaPhoneId}/messages`, {
           method: "POST",
           headers: {
@@ -78,10 +114,7 @@ export async function POST(
             messaging_product: "whatsapp",
             to: contact.phone,
             type: "template",
-            template: {
-              name: campaign.template,
-              language: { code: templateLanguage },
-            },
+            template: templatePayload,
           }),
         });
 
