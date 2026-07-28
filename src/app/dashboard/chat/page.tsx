@@ -4,93 +4,219 @@ import { useState, useRef, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import styles from './chat.module.css';
 
-// Mocks para simular a interface inicial
-const MOCK_CONVERSATIONS = [
-  {
-    id: '1',
-    contactName: 'João Silva',
-    lastMessage: 'Gostaria de saber mais sobre a campanha.',
-    time: '10:30',
-    lockedBy: null, // Sem dono ainda (fila)
-    messages: [
-      { id: 'm1', direction: 'INBOUND', content: 'Gostaria de saber mais sobre a campanha.', time: '10:30' }
-    ]
-  },
-  {
-    id: '2',
-    contactName: 'Maria Oliveira',
-    lastMessage: 'Perfeito, vou assinar o plano.',
-    time: 'Ontem',
-    lockedBy: 'admin@admin.com', // Já tem dono
-    messages: [
-      { id: 'm1', direction: 'OUTBOUND', content: 'Olá Maria! Nosso plano premium custa R$99/mês.', time: '14:20' },
-      { id: 'm2', direction: 'INBOUND', content: 'Perfeito, vou assinar o plano.', time: '14:25' }
-    ]
-  }
-];
+type UserData = {
+  id: string;
+  email: string;
+  role: string;
+  teamId: string | null;
+  teamName?: string;
+};
+
+type Conversation = {
+  id: string;
+  contactName: string;
+  contactId: string;
+  lastMessage: string;
+  time: string;
+  lockedBy: string | null;
+  lockedById: string | null;
+  teamId: string | null;
+};
+
+type Message = {
+  id: string;
+  direction: string;
+  content: string;
+  time: string;
+};
+
+type Team = {
+  id: string;
+  name: string;
+};
 
 export default function ChatPage() {
   const { data: session } = useSession();
-  const [conversations, setConversations] = useState(MOCK_CONVERSATIONS);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
+  
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  
   const [inputText, setInputText] = useState('');
+  const [filter, setFilter] = useState<'triagem' | 'team'>('triagem');
+  const [teams, setTeams] = useState<Team[]>([]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const activeConversation = conversations.find(c => c.id === activeId);
-  const currentUserEmail = session?.user?.email;
+  // Fetch current user details
+  useEffect(() => {
+    if (session?.user?.email) {
+      fetch('/api/users/me')
+        .then(res => res.json())
+        .then(data => {
+          if (!data.error) setCurrentUser(data);
+        });
+    }
+  }, [session]);
 
-  // Rola para baixo ao abrir conversa ou receber mensagem
+  // Fetch teams if admin
+  useEffect(() => {
+    if (currentUser?.role === 'ADMIN') {
+      fetch('/api/teams')
+        .then(res => res.json())
+        .then(data => {
+          if (!data.error) setTeams(data);
+        });
+    }
+  }, [currentUser]);
+
+  // Fetch conversations
+  const fetchConversations = async () => {
+    if (!currentUser) return;
+    
+    let url = `/api/chat/conversations?filter=${filter}`;
+    if (filter === 'team' && currentUser.teamId) {
+       url += `&teamId=${currentUser.teamId}`;
+    }
+
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!data.error) {
+        setConversations(data);
+        // Update active conversation reference
+        if (activeConversation) {
+          const updatedActive = data.find((c: Conversation) => c.id === activeConversation.id);
+          if (updatedActive) setActiveConversation(updatedActive);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Fetch messages
+  const fetchMessages = async () => {
+    if (!activeConversation) return;
+    try {
+      const res = await fetch(`/api/chat/messages?conversationId=${activeConversation.id}`);
+      const data = await res.json();
+      if (!data.error) {
+        setMessages(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Polling intervals
+  useEffect(() => {
+    fetchConversations();
+    const interval = setInterval(fetchConversations, 5000);
+    return () => clearInterval(interval);
+  }, [currentUser, filter]);
+
+  useEffect(() => {
+    if (activeConversation) {
+      fetchMessages();
+      const interval = setInterval(fetchMessages, 3000);
+      return () => clearInterval(interval);
+    } else {
+      setMessages([]);
+    }
+  }, [activeConversation?.id]);
+
+  // Scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [activeConversation?.messages]);
+  }, [messages]);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim() || !activeConversation) return;
 
-    // Se a conversa não tem dono (lockedBy == null), o primeiro a responder "rouba" o lead (Lock)
-    const isFirstReply = !activeConversation.lockedBy;
+    const content = inputText.trim();
+    setInputText('');
 
-    const newMessage = {
+    // Optimistic UI
+    const tempMsg: Message = {
       id: Date.now().toString(),
       direction: 'OUTBOUND',
-      content: inputText.trim(),
+      content,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
+    setMessages(prev => [...prev, tempMsg]);
 
-    setConversations(prev => prev.map(conv => {
-      if (conv.id === activeId) {
-        return {
-          ...conv,
-          lastMessage: newMessage.content,
-          time: newMessage.time,
-          lockedBy: isFirstReply ? (currentUserEmail || null) : conv.lockedBy,
-          messages: [...conv.messages, newMessage]
-        };
-      }
-      return conv;
-    }));
-
-    setInputText('');
+    try {
+      await fetch('/api/chat/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversationId: activeConversation.id,
+          content
+        })
+      });
+      fetchMessages();
+      fetchConversations();
+    } catch (e) {
+      console.error("Failed to send message", e);
+    }
   };
 
-  // Verifica se o usuário atual pode digitar (Se não tem dono OU se ele é o dono)
-  const canType = activeConversation && (!activeConversation.lockedBy || activeConversation.lockedBy === currentUserEmail);
+  const handleTransfer = async (teamId: string) => {
+    if (!activeConversation) return;
+    try {
+      const res = await fetch(`/api/contacts/${activeConversation.contactId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId })
+      });
+      if (res.ok) {
+        // Remove from list or refresh
+        setActiveConversation(null);
+        fetchConversations();
+      }
+    } catch (e) {
+      console.error("Failed to transfer", e);
+    }
+  };
+
+  const canType = activeConversation && (!activeConversation.lockedById || activeConversation.lockedById === currentUser?.id);
 
   return (
     <div className={styles.container}>
-      {/* SIDEBAR - Lista de Contatos */}
+      {/* SIDEBAR */}
       <div className={styles.sidebar}>
         <div className={styles.searchHeader}>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+            <button 
+              style={{
+                flex: 1, padding: '8px', background: filter === 'triagem' ? 'var(--primary)' : 'rgba(255,255,255,0.1)', 
+                color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px'
+              }}
+              onClick={() => setFilter('triagem')}
+            >
+              Triagem
+            </button>
+            <button 
+              style={{
+                flex: 1, padding: '8px', background: filter === 'team' ? 'var(--primary)' : 'rgba(255,255,255,0.1)', 
+                color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px'
+              }}
+              onClick={() => setFilter('team')}
+            >
+              Minha Equipe
+            </button>
+          </div>
           <input type="text" placeholder="Buscar conversas..." className={styles.searchInput} />
         </div>
         <div className={styles.conversationList}>
           {conversations.map(conv => (
             <div 
               key={conv.id} 
-              className={`${styles.conversationItem} ${activeId === conv.id ? styles.conversationItemActive : ''}`}
-              onClick={() => setActiveId(conv.id)}
+              className={`${styles.conversationItem} ${activeConversation?.id === conv.id ? styles.conversationItemActive : ''}`}
+              onClick={() => setActiveConversation(conv)}
             >
               <div className={styles.avatar}>
                 {conv.contactName.charAt(0)}
@@ -104,7 +230,7 @@ export default function ChatPage() {
                 <div className={styles.tags}>
                   {!conv.lockedBy ? (
                     <span className={styles.tag}>Fila Aberta</span>
-                  ) : conv.lockedBy === currentUserEmail ? (
+                  ) : conv.lockedBy === currentUser?.email ? (
                     <span className={styles.tag}>Seu Lead</span>
                   ) : (
                     <span className={`${styles.tag} ${styles.tagLocked}`}>🔒 Lock: {conv.lockedBy}</span>
@@ -113,27 +239,50 @@ export default function ChatPage() {
               </div>
             </div>
           ))}
+          {conversations.length === 0 && (
+             <div style={{ padding: '20px', textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+               Nenhuma conversa encontrada.
+             </div>
+          )}
         </div>
       </div>
 
-      {/* ÁREA DE CHAT - Mensagens */}
+      {/* ÁREA DE CHAT */}
       <div className={styles.chatArea}>
         {activeConversation ? (
           <>
-            <div className={styles.chatHeader}>
-              <div className={styles.avatar} style={{ width: 40, height: 40, fontSize: 16 }}>
-                {activeConversation.contactName.charAt(0)}
+            <div className={styles.chatHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div className={styles.avatar} style={{ width: 40, height: 40, fontSize: 16 }}>
+                  {activeConversation.contactName.charAt(0)}
+                </div>
+                <div>
+                  <h2 style={{ fontSize: 16, color: '#fff', margin: 0 }}>{activeConversation.contactName}</h2>
+                  <span style={{ fontSize: 13, color: '#9ca3af' }}>
+                    {activeConversation.lockedBy ? `Atendido por ${activeConversation.lockedBy}` : 'Aguardando atendimento'}
+                  </span>
+                </div>
               </div>
-              <div>
-                <h2 style={{ fontSize: 16, color: '#fff' }}>{activeConversation.contactName}</h2>
-                <span style={{ fontSize: 13, color: '#9ca3af' }}>
-                  {activeConversation.lockedBy ? `Atendido por ${activeConversation.lockedBy}` : 'Aguardando atendimento'}
-                </span>
-              </div>
+
+              {currentUser?.role === 'ADMIN' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '13px', color: '#9ca3af' }}>Transferir:</span>
+                  <select 
+                    style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid var(--surface-border)', padding: '6px', borderRadius: '4px' }}
+                    value={activeConversation.teamId || ''}
+                    onChange={(e) => handleTransfer(e.target.value)}
+                  >
+                    <option value="">Triagem (Sem Equipe)</option>
+                    {teams.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             <div className={styles.messagesContainer}>
-              {activeConversation.messages.map(msg => (
+              {messages.map(msg => (
                 <div 
                   key={msg.id} 
                   className={`${styles.message} ${msg.direction === 'INBOUND' ? styles.messageInbound : styles.messageOutbound}`}
@@ -145,7 +294,6 @@ export default function ChatPage() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input ou Banner de Bloqueio */}
             {canType ? (
               <form onSubmit={handleSendMessage} className={styles.inputArea}>
                 <input 

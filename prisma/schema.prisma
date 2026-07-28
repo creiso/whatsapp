@@ -27,6 +27,7 @@ model Team {
   name      String
   users     User[]
   campaigns Campaign[]
+  contacts  Contact[]
 }
 
 model Contact {
@@ -36,8 +37,11 @@ model Contact {
   attributes String? // JSON de tags ou colunas dinamicas
   createdAt DateTime @default(now())
   status    String   @default("ACTIVE") // ACTIVE, EXCEPTION
+  teamId    String?  // Relacionamento com a equipe (Leads sem equipe vão para "Sequência Inicial")
+  team      Team?    @relation(fields: [teamId], references: [id])
   conversations Conversation[]
 }
+
 
 model Campaign {
   id        String   @id @default(cuid())
@@ -80,4 +84,15 @@ model Setting {
   id    String @id @default(cuid())
   key   String @unique
   value String
+}
+
+model MetaTemplate {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  language  String
+  status    String
+  category  String
+  components String? // JSON representation of the template structure
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

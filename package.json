@@ -10,7 +10,7 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.110.8",
+    "@supabase/supabase-js": "^2.110.9",
     "bcryptjs": "^3.0.3",
     "next": "16.2.11",
     "next-auth": "^4.24.15",

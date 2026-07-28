@@ -13,6 +13,7 @@ export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'error' | null>(null);
@@ -131,6 +132,28 @@ export default function SettingsPage() {
     }
   };
 
+  const syncTemplates = async () => {
+    setIsSyncing(true);
+    try {
+      const response = await fetch('/api/meta/templates/sync', {
+        method: 'POST',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        showToast(`Templates sincronizados com sucesso (${data.count} encontrados)`, "success");
+      } else {
+        const errorData = await response.json();
+        console.error("Meta API Error:", errorData);
+        showToast(errorData.error || "Falha ao sincronizar templates", "error");
+      }
+    } catch (error) {
+      console.error("Sync failed:", error);
+      showToast("Erro ao sincronizar templates", "error");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className={styles.container}>
@@ -220,6 +243,15 @@ export default function SettingsPage() {
               {connectionStatus === 'connected' && <span className={styles.statusConnected + ' ' + styles.statusIndicator}></span>}
               {connectionStatus === 'error' && <span className={styles.statusError + ' ' + styles.statusIndicator}></span>}
               Testar Conexão
+            </button>
+            <button 
+              type="button" 
+              className={styles.buttonSecondary} 
+              onClick={syncTemplates}
+              disabled={isSyncing}
+            >
+              {isSyncing && <div className={styles.loader}></div>}
+              Carregar Templates da Meta
             </button>
           </div>
         </form>

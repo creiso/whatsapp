@@ -20,6 +20,13 @@ export default function ContactsPage() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
+  // Mapping Modal State
+  const [isMappingModalOpen, setIsMappingModalOpen] = useState(false);
+  const [csvData, setCsvData] = useState<string[][]>([]);
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [csvSampleData, setCsvSampleData] = useState<string[]>([]);
+  const [columnMapping, setColumnMapping] = useState<Record<number, string>>({});
+
   // Modal Form State
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
@@ -89,29 +96,87 @@ export default function ContactsPage() {
     }
   };
 
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append('file', file);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      if (text) {
+        // Basic CSV parsing
+        const rows = text.split('\n').map(row => row.split(',').map(c => c.trim()));
+        if (rows.length < 2) {
+          showToast('O arquivo CSV deve conter pelo menos um cabeçalho e uma linha de dados', 'error');
+          return;
+        }
+        
+        const headers = rows[0];
+        const sample = rows[1] || [];
+        
+        const initialMapping: Record<number, string> = {};
+        headers.forEach((header, index) => {
+          if (/(telefone|phone|cel|whatsapp)/i.test(header)) {
+            initialMapping[index] = 'phone';
+          } else if (/(nome|name)/i.test(header)) {
+            initialMapping[index] = 'name';
+          } else {
+            initialMapping[index] = 'dynamic';
+          }
+        });
 
+        setCsvHeaders(headers);
+        setCsvSampleData(sample);
+        setCsvData(rows.slice(1).filter(r => r.some(c => c))); // remove empty rows
+        setColumnMapping(initialMapping);
+        setIsMappingModalOpen(true);
+      }
+    };
+    reader.readAsText(file);
+    
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleConfirmImport = async () => {
     setLoading(true);
-    try {
-      const res = await fetch('/api/contacts/import', {
-        method: 'POST',
-        body: formData,
+    setIsMappingModalOpen(false);
+
+    const payload = csvData.map(row => {
+      let phone = '';
+      let name = '';
+      const attributes: Record<string, string> = {};
+
+      csvHeaders.forEach((header, index) => {
+        const mapping = columnMapping[index];
+        const value = row[index] || '';
+        
+        if (mapping === 'phone') {
+          phone = value;
+        } else if (mapping === 'name') {
+          name = value;
+        } else if (mapping === 'dynamic') {
+          if (value) attributes[header] = value;
+        }
       });
+
+      return { phone, name, attributes };
+    }).filter(c => c.phone); // Require phone
+
+    try {
+      const res = await fetch('/api/contacts/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
       if (!res.ok) throw new Error();
       const result = await res.json();
-      showToast(`${result.imported} contatos importados, ${result.skipped} ignorados.`, 'success');
+      showToast(`${result.imported} contatos importados/atualizados com sucesso.`, 'success');
       fetchContacts();
     } catch {
       showToast('Erro ao importar contatos', 'error');
       setLoading(false);
     }
-    
-    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const filteredContacts = contacts.filter(c => {
@@ -138,7 +203,7 @@ export default function ContactsPage() {
             accept=".csv" 
             style={{ display: 'none' }} 
             ref={fileInputRef}
-            onChange={handleImport}
+            onChange={handleFileChange}
           />
           <button 
             className={styles.buttonSecondary}
@@ -273,6 +338,53 @@ export default function ContactsPage() {
                 <button type="submit" className={styles.buttonPrimary}>Salvar</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {isMappingModalOpen && (
+        <div className={styles.modalOverlay}>
+          <div className={`${styles.modal} ${styles.mappingModal}`}>
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>Mapeamento de Colunas</h2>
+              <button className={styles.closeButton} onClick={() => setIsMappingModalOpen(false)}>×</button>
+            </div>
+            <div className={styles.tableContainer} style={{ marginBottom: '24px' }}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th className={styles.th}>Coluna da Planilha</th>
+                    <th className={styles.th}>Exemplo</th>
+                    <th className={styles.th}>Importar como...</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {csvHeaders.map((header, index) => (
+                    <tr key={index} className={styles.tr}>
+                      <td className={styles.td} style={{ fontWeight: 500, color: '#fff' }}>{header}</td>
+                      <td className={styles.td}>{csvSampleData[index] || '-'}</td>
+                      <td className={styles.td}>
+                        <select 
+                          className={styles.filterSelect}
+                          style={{ width: '100%' }}
+                          value={columnMapping[index] || 'ignore'}
+                          onChange={(e) => setColumnMapping({...columnMapping, [index]: e.target.value})}
+                        >
+                          <option value="ignore">Ignorar</option>
+                          <option value="phone">Telefone (Obrigatório)</option>
+                          <option value="name">Nome</option>
+                          <option value="dynamic">Campo Adicional (Dinâmico)</option>
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className={styles.modalFooter}>
+              <button className={styles.buttonSecondary} onClick={() => setIsMappingModalOpen(false)}>Cancelar</button>
+              <button className={styles.buttonPrimary} onClick={handleConfirmImport}>Confirmar Importação</button>
+            </div>
           </div>
         </div>
       )}

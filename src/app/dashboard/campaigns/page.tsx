@@ -6,6 +6,7 @@ import styles from './campaigns.module.css';
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Modal state
@@ -45,8 +46,20 @@ export default function CampaignsPage() {
     }
   };
 
+  const fetchTemplates = async () => {
+    try {
+      const res = await fetch('/api/meta/templates');
+      if (res.ok) {
+        const data = await res.json();
+        setTemplates(data);
+      }
+    } catch (error) {
+      console.error('Error fetching templates', error);
+    }
+  };
+
   useEffect(() => {
-    Promise.all([fetchCampaigns(), fetchTeams()]).finally(() => setLoading(false));
+    Promise.all([fetchCampaigns(), fetchTeams(), fetchTemplates()]).finally(() => setLoading(false));
   }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -186,14 +199,17 @@ export default function CampaignsPage() {
               </div>
               <div className={styles.formGroup}>
                 <label>Template</label>
-                <input 
-                  type="text" 
+                <select 
                   value={newCampaign.template} 
                   onChange={e => setNewCampaign({...newCampaign, template: e.target.value})}
                   required 
-                  className={styles.input}
-                  placeholder="Ex: promocao_v1"
-                />
+                  className={styles.select}
+                >
+                  <option value="">Selecione um template</option>
+                  {templates.map(template => (
+                    <option key={template.id} value={template.name}>{template.name}</option>
+                  ))}
+                </select>
               </div>
               <div className={styles.formGroup}>
                 <label>Equipe</label>
