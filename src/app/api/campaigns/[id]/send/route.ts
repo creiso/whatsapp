@@ -85,6 +85,22 @@ export async function POST(
           errorCount++;
         } else {
           sentCount++;
+          // Salvar no feed de mensagens
+          let conv = await prisma.conversation.findFirst({
+            where: { contactId: contact.id, status: "OPEN" }
+          });
+          if (!conv) {
+            conv = await prisma.conversation.create({
+              data: { contactId: contact.id }
+            });
+          }
+          await prisma.message.create({
+            data: {
+              conversationId: conv.id,
+              content: `[Campanha Automática] Template: ${campaign.template}`,
+              direction: "OUTBOUND"
+            }
+          });
         }
       } catch (err) {
         console.error("Error sending to", contact.phone, err);
