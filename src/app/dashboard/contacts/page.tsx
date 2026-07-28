@@ -25,7 +25,9 @@ export default function ContactsPage() {
   const [csvData, setCsvData] = useState<string[][]>([]);
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [csvSampleData, setCsvSampleData] = useState<string[]>([]);
-  const [columnMapping, setColumnMapping] = useState<Record<number, string>>({});
+  const [mappedPhone, setMappedPhone] = useState<string>('');
+  const [mappedName, setMappedName] = useState<string>('');
+  const [mappedCustom, setMappedCustom] = useState<{key: string, index: string}[]>([]);
 
   // Modal Form State
   const [newName, setNewName] = useState('');
@@ -114,21 +116,26 @@ export default function ContactsPage() {
         const headers = rows[0];
         const sample = rows[1] || [];
         
-        const initialMapping: Record<number, string> = {};
+        let phoneIdx = '';
+        let nameIdx = '';
+        const custom: {key: string, index: string}[] = [];
+        
         headers.forEach((header, index) => {
-          if (/(telefone|phone|cel|whatsapp)/i.test(header)) {
-            initialMapping[index] = 'phone';
-          } else if (/(nome|name)/i.test(header)) {
-            initialMapping[index] = 'name';
+          if (/(telefone|phone|cel|whatsapp)/i.test(header) && !phoneIdx) {
+            phoneIdx = index.toString();
+          } else if (/(nome|name)/i.test(header) && !nameIdx) {
+            nameIdx = index.toString();
           } else {
-            initialMapping[index] = 'dynamic';
+            custom.push({ key: header, index: index.toString() });
           }
         });
 
         setCsvHeaders(headers);
         setCsvSampleData(sample);
         setCsvData(rows.slice(1).filter(r => r.some(c => c))); // remove empty rows
-        setColumnMapping(initialMapping);
+        setMappedPhone(phoneIdx);
+        setMappedName(nameIdx);
+        setMappedCustom(custom);
         setIsMappingModalOpen(true);
       }
     };
@@ -141,21 +148,21 @@ export default function ContactsPage() {
     setLoading(true);
     setIsMappingModalOpen(false);
 
+    if (!mappedPhone) {
+      showToast('O campo Telefone é obrigatório', 'error');
+      setLoading(false);
+      return;
+    }
+
     const payload = csvData.map(row => {
-      let phone = '';
-      let name = '';
+      const phone = row[parseInt(mappedPhone)] || '';
+      const name = mappedName ? (row[parseInt(mappedName)] || '') : '';
       const attributes: Record<string, string> = {};
 
-      csvHeaders.forEach((header, index) => {
-        const mapping = columnMapping[index];
-        const value = row[index] || '';
-        
-        if (mapping === 'phone') {
-          phone = value;
-        } else if (mapping === 'name') {
-          name = value;
-        } else if (mapping === 'dynamic') {
-          if (value) attributes[header] = value;
+      mappedCustom.forEach(custom => {
+        if (custom.index !== '') {
+          const value = row[parseInt(custom.index)] || '';
+          if (value) attributes[custom.key] = value;
         }
       });
 
@@ -353,33 +360,99 @@ export default function ContactsPage() {
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th className={styles.th}>Coluna da Planilha</th>
-                    <th className={styles.th}>Exemplo</th>
-                    <th className={styles.th}>Importar como...</th>
+                    <th className={styles.th}>Campo do CRM</th>
+                    <th className={styles.th}>Coluna do CSV</th>
+                    <th className={styles.th}>Ação</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {csvHeaders.map((header, index) => (
-                    <tr key={index} className={styles.tr}>
-                      <td className={styles.td} style={{ fontWeight: 500, color: '#fff' }}>{header}</td>
-                      <td className={styles.td}>{csvSampleData[index] || '-'}</td>
+                  <tr className={styles.tr}>
+                    <td className={styles.td} style={{ fontWeight: 500, color: '#fff' }}>Telefone *</td>
+                    <td className={styles.td}>
+                      <select 
+                        className={styles.filterSelect}
+                        style={{ width: '100%' }}
+                        value={mappedPhone}
+                        onChange={(e) => setMappedPhone(e.target.value)}
+                      >
+                        <option value="">-- Selecione uma coluna --</option>
+                        {csvHeaders.map((h, i) => <option key={i} value={i}>{h}</option>)}
+                      </select>
+                    </td>
+                    <td className={styles.td}></td>
+                  </tr>
+                  <tr className={styles.tr}>
+                    <td className={styles.td} style={{ fontWeight: 500, color: '#fff' }}>Nome</td>
+                    <td className={styles.td}>
+                      <select 
+                        className={styles.filterSelect}
+                        style={{ width: '100%' }}
+                        value={mappedName}
+                        onChange={(e) => setMappedName(e.target.value)}
+                      >
+                        <option value="">-- Ignorar --</option>
+                        {csvHeaders.map((h, i) => <option key={i} value={i}>{h}</option>)}
+                      </select>
+                    </td>
+                    <td className={styles.td}></td>
+                  </tr>
+                  
+                  {mappedCustom.map((custom, idx) => (
+                    <tr key={idx} className={styles.tr}>
+                      <td className={styles.td}>
+                        <input 
+                          type="text" 
+                          className={styles.input} 
+                          style={{ padding: '6px 12px' }}
+                          value={custom.key} 
+                          onChange={(e) => {
+                            const newCustom = [...mappedCustom];
+                            newCustom[idx].key = e.target.value;
+                            setMappedCustom(newCustom);
+                          }}
+                          placeholder="Nome do Campo"
+                        />
+                      </td>
                       <td className={styles.td}>
                         <select 
                           className={styles.filterSelect}
                           style={{ width: '100%' }}
-                          value={columnMapping[index] || 'ignore'}
-                          onChange={(e) => setColumnMapping({...columnMapping, [index]: e.target.value})}
+                          value={custom.index}
+                          onChange={(e) => {
+                            const newCustom = [...mappedCustom];
+                            newCustom[idx].index = e.target.value;
+                            setMappedCustom(newCustom);
+                          }}
                         >
-                          <option value="ignore">Ignorar</option>
-                          <option value="phone">Telefone (Obrigatório)</option>
-                          <option value="name">Nome</option>
-                          <option value="dynamic">Campo Adicional (Dinâmico)</option>
+                          <option value="">-- Ignorar --</option>
+                          {csvHeaders.map((h, i) => <option key={i} value={i}>{h}</option>)}
                         </select>
+                      </td>
+                      <td className={styles.td}>
+                        <button 
+                          className={styles.iconButton}
+                          onClick={() => {
+                            const newCustom = [...mappedCustom];
+                            newCustom.splice(idx, 1);
+                            setMappedCustom(newCustom);
+                          }}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
+               <button 
+                  className={styles.buttonSecondary} 
+                  onClick={() => setMappedCustom([...mappedCustom, { key: 'Novo Campo', index: '' }])}
+               >
+                 + Adicionar Campo Personalizado
+               </button>
             </div>
             <div className={styles.modalFooter}>
               <button className={styles.buttonSecondary} onClick={() => setIsMappingModalOpen(false)}>Cancelar</button>
