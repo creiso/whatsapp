@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import prisma from "@/lib/prisma";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.email) {
@@ -17,9 +17,10 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
   try {
     const { teamId } = await req.json();
+    const resolvedParams = await params;
 
     const contact = await prisma.contact.update({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       data: { teamId: teamId === "" ? null : teamId }
     });
 
