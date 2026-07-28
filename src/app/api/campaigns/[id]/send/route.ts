@@ -33,13 +33,13 @@ export async function POST(
     const settings = await prisma.setting.findMany({
       where: {
         key: {
-          in: ["meta_access_token", "meta_phone_id"],
+          in: ["meta_access_token", "meta_phone_number_id"],
         },
       },
     });
 
     const metaAccessToken = settings.find((s: any) => s.key === "meta_access_token")?.value;
-    const metaPhoneId = settings.find((s: any) => s.key === "meta_phone_id")?.value;
+    const metaPhoneId = settings.find((s: any) => s.key === "meta_phone_number_id")?.value;
 
     if (!metaAccessToken || !metaPhoneId) {
       return NextResponse.json(
