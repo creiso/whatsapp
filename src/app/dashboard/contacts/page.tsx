@@ -363,10 +363,8 @@ export default function ContactsPage() {
         let attrs = {};
         try { attrs = c.attributes ? JSON.parse(c.attributes) : {}; } catch(e) {}
         return {
-          ID: c.id,
           Nome: c.name || '',
           Telefone: c.phone,
-          Status: c.status,
           ...attrs
         };
       });
