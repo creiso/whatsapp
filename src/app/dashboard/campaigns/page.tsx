@@ -1,46 +1,93 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styles from './campaigns.module.css';
 
-const MOCK_CAMPAIGNS = [
-  {
-    id: '1',
-    name: 'Black Friday 2026',
-    status: 'RUNNING',
-    template: 'promocao_bf_v1',
-    team: 'Equipe de Vendas 1',
-    sent: 1450,
-    delivered: 1420,
-    errors: 30, // User is not on WhatsApp / Exceções
-    total: 5000
-  },
-  {
-    id: '2',
-    name: 'Reativação de Clientes Antigos',
-    status: 'COMPLETED',
-    template: 'reativacao_saudades',
-    team: 'Retenção',
-    sent: 500,
-    delivered: 480,
-    errors: 20,
-    total: 500
-  },
-  {
-    id: '3',
-    name: 'Lançamento Novo Produto',
-    status: 'DRAFT',
-    template: 'lancamento_oficial',
-    team: 'Lançamentos',
-    sent: 0,
-    delivered: 0,
-    errors: 0,
-    total: 12000
-  }
-];
-
 export default function CampaignsPage() {
-  const [campaigns] = useState(MOCK_CAMPAIGNS);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [teams, setTeams] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newCampaign, setNewCampaign] = useState({ name: '', template: '', teamId: '' });
+  
+  // Toast state
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const fetchCampaigns = async () => {
+    try {
+      const res = await fetch('/api/campaigns');
+      if (res.ok) {
+        const data = await res.json();
+        setCampaigns(data);
+      }
+    } catch (error) {
+      console.error('Error fetching campaigns', error);
+      showToast('Erro ao carregar campanhas', 'error');
+    }
+  };
+
+  const fetchTeams = async () => {
+    try {
+      const res = await fetch('/api/teams');
+      if (res.ok) {
+        const data = await res.json();
+        setTeams(data);
+      }
+    } catch (error) {
+      console.error('Error fetching teams', error);
+    }
+  };
+
+  useEffect(() => {
+    Promise.all([fetchCampaigns(), fetchTeams()]).finally(() => setLoading(false));
+  }, []);
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/campaigns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCampaign),
+      });
+      if (res.ok) {
+        showToast('Campanha criada com sucesso!', 'success');
+        setIsModalOpen(false);
+        setNewCampaign({ name: '', template: '', teamId: '' });
+        fetchCampaigns();
+      } else {
+        showToast('Erro ao criar campanha', 'error');
+      }
+    } catch (error) {
+      showToast('Erro ao criar campanha', 'error');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Tem certeza que deseja excluir esta campanha?')) return;
+    try {
+      const res = await fetch('/api/campaigns', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) {
+        showToast('Campanha excluída com sucesso!', 'success');
+        fetchCampaigns();
+      } else {
+        showToast('Erro ao excluir campanha', 'error');
+      }
+    } catch (error) {
+      showToast('Erro ao excluir campanha', 'error');
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -51,47 +98,129 @@ export default function CampaignsPage() {
       case 'COMPLETED':
         return <span className={`${styles.statusBadge} ${styles.statusCompleted}`}>CONCLUÍDO</span>;
       default:
-        return null;
+        return <span className={`${styles.statusBadge} ${styles.statusDraft}`}>{status}</span>;
     }
   };
 
   return (
     <div className={styles.container}>
+      {toast && (
+        <div className={`${styles.toast} ${styles[`toast-${toast.type}`]}`}>
+          {toast.message}
+        </div>
+      )}
+
       <div className={styles.header}>
         <h1 className={styles.title}>Disparos e Campanhas</h1>
-        <button className={styles.buttonPrimary}>+ Nova Campanha</button>
+        <button className={styles.buttonPrimary} onClick={() => setIsModalOpen(true)}>
+          + Nova Campanha
+        </button>
       </div>
 
-      <div className={styles.grid}>
-        {campaigns.map(campaign => (
-          <div key={campaign.id} className={styles.card}>
-            <div className={styles.cardHeader}>
-              <div className={styles.campaignName}>{campaign.name}</div>
-              {getStatusBadge(campaign.status)}
-            </div>
+      {loading ? (
+        <div className={styles.loaderContainer}>
+          <div className={styles.loader}></div>
+        </div>
+      ) : (
+        <div className={styles.grid}>
+          {campaigns.map(campaign => (
+            <div key={campaign.id} className={styles.card}>
+              <button 
+                className={styles.deleteButton} 
+                onClick={() => handleDelete(campaign.id)}
+                title="Excluir campanha"
+              >
+                🗑️
+              </button>
+              
+              <div className={styles.cardHeader}>
+                <div className={styles.campaignName}>{campaign.name}</div>
+                {getStatusBadge(campaign.status)}
+              </div>
 
-            <div className={styles.statsRow}>
-              <div className={styles.stat}>
-                <span className={styles.statLabel}>ENVIADOS</span>
-                <span className={styles.statValue}>{campaign.sent} / {campaign.total}</span>
+              <div className={styles.statsRow}>
+                <div className={styles.stat}>
+                  <span className={styles.statLabel}>ENVIADOS</span>
+                  <span className={styles.statValue}>{campaign.sent || 0} / {campaign.total || 0}</span>
+                </div>
+                <div className={styles.stat}>
+                  <span className={styles.statLabel}>ENTREGUES</span>
+                  <span className={styles.statValue}>{campaign.delivered || 0}</span>
+                </div>
+                <div className={styles.stat}>
+                  <span className={styles.statLabel}>EXCEÇÕES</span>
+                  <span className={`${styles.statValue} ${styles.statError}`}>{campaign.errors || 0}</span>
+                </div>
               </div>
-              <div className={styles.stat}>
-                <span className={styles.statLabel}>ENTREGUES</span>
-                <span className={styles.statValue}>{campaign.delivered}</span>
-              </div>
-              <div className={styles.stat}>
-                <span className={styles.statLabel}>EXCEÇÕES</span>
-                <span className={`${styles.statValue} ${styles.statError}`}>{campaign.errors}</span>
-              </div>
-            </div>
 
-            <div className={styles.details}>
-              <div><strong>Template:</strong> {campaign.template}</div>
-              <div><strong>Equipe Responsável:</strong> {campaign.team}</div>
+              <div className={styles.details}>
+                <div><strong>Template:</strong> {campaign.template}</div>
+                <div><strong>Equipe Responsável:</strong> {campaign.team?.name || 'Sem Equipe'}</div>
+              </div>
             </div>
+          ))}
+          {campaigns.length === 0 && (
+            <div className={styles.emptyState}>Nenhuma campanha encontrada.</div>
+          )}
+        </div>
+      )}
+
+      {isModalOpen && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <div className={styles.modalHeader}>
+              <h2>Nova Campanha</h2>
+              <button className={styles.closeButton} onClick={() => setIsModalOpen(false)}>×</button>
+            </div>
+            <form onSubmit={handleCreate} className={styles.form}>
+              <div className={styles.formGroup}>
+                <label>Nome da Campanha</label>
+                <input 
+                  type="text" 
+                  value={newCampaign.name} 
+                  onChange={e => setNewCampaign({...newCampaign, name: e.target.value})}
+                  required 
+                  className={styles.input}
+                  placeholder="Ex: Black Friday"
+                />
+              </div>
+              <div className={styles.formGroup}>
+                <label>Template</label>
+                <input 
+                  type="text" 
+                  value={newCampaign.template} 
+                  onChange={e => setNewCampaign({...newCampaign, template: e.target.value})}
+                  required 
+                  className={styles.input}
+                  placeholder="Ex: promocao_v1"
+                />
+              </div>
+              <div className={styles.formGroup}>
+                <label>Equipe</label>
+                <select 
+                  value={newCampaign.teamId} 
+                  onChange={e => setNewCampaign({...newCampaign, teamId: e.target.value})}
+                  required
+                  className={styles.select}
+                >
+                  <option value="">Selecione uma equipe</option>
+                  {teams.map(team => (
+                    <option key={team.id} value={team.id}>{team.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className={styles.modalActions}>
+                <button type="button" className={styles.buttonSecondary} onClick={() => setIsModalOpen(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" className={styles.buttonPrimary}>
+                  Criar Campanha
+                </button>
+              </div>
+            </form>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

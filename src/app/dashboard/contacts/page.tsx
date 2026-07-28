@@ -1,49 +1,149 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import styles from './contacts.module.css';
 
-const MOCK_CONTACTS = [
-  {
-    id: '1',
-    name: 'João Silva',
-    phone: '+55 11 99999-1111',
-    status: 'ACTIVE',
-    team: 'Equipe de Vendas 1',
-    fields: { origem: 'facebook_ads', interesse: 'plano_anual' }
-  },
-  {
-    id: '2',
-    name: 'Maria Oliveira',
-    phone: '+55 21 98888-2222',
-    status: 'ACTIVE',
-    team: 'Retenção',
-    fields: { origem: 'planilha_antiga' }
-  },
-  {
-    id: '3',
-    name: 'Número Inválido (Teste)',
-    phone: '+55 31 1234-5678',
-    status: 'EXCEPTION',
-    team: 'Nenhuma',
-    fields: { erro: 'User is not on WhatsApp' }
-  }
-];
+type Contact = {
+  id: string;
+  name: string | null;
+  phone: string;
+  attributes: string | null;
+  createdAt: string;
+  status: string;
+};
 
 export default function ContactsPage() {
-  const [contacts] = useState(MOCK_CONTACTS);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Modal Form State
+  const [newName, setNewName] = useState('');
+  const [newPhone, setNewPhone] = useState('');
 
-  const filteredContacts = filterStatus === 'ALL' 
-    ? contacts 
-    : contacts.filter(c => c.status === filterStatus);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const fetchContacts = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/contacts');
+      if (!res.ok) throw new Error('Failed to fetch');
+      const data = await res.json();
+      setContacts(data);
+    } catch (err) {
+      showToast('Erro ao carregar contatos', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchContacts();
+  }, []);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Tem certeza que deseja excluir este contato?')) return;
+    try {
+      const res = await fetch('/api/contacts', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) throw new Error();
+      setContacts(contacts.filter(c => c.id !== id));
+      showToast('Contato excluído com sucesso', 'success');
+    } catch {
+      showToast('Erro ao excluir contato', 'error');
+    }
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPhone) {
+      showToast('Telefone é obrigatório', 'error');
+      return;
+    }
+    try {
+      const res = await fetch('/api/contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName, phone: newPhone }),
+      });
+      if (!res.ok) throw new Error();
+      const newContact = await res.json();
+      setContacts([newContact, ...contacts]);
+      setIsModalOpen(false);
+      setNewName('');
+      setNewPhone('');
+      showToast('Contato criado com sucesso', 'success');
+    } catch {
+      showToast('Erro ao criar contato. Verifique se o telefone já existe.', 'error');
+    }
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    setLoading(true);
+    try {
+      const res = await fetch('/api/contacts/import', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!res.ok) throw new Error();
+      const result = await res.json();
+      showToast(`${result.imported} contatos importados, ${result.skipped} ignorados.`, 'success');
+      fetchContacts();
+    } catch {
+      showToast('Erro ao importar contatos', 'error');
+      setLoading(false);
+    }
+    
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const filteredContacts = contacts.filter(c => {
+    const matchesStatus = filterStatus === 'ALL' || c.status === filterStatus;
+    const matchesSearch = 
+      (c.name?.toLowerCase().includes(searchQuery.toLowerCase()) || '') ||
+      c.phone.includes(searchQuery);
+    return matchesStatus && matchesSearch;
+  });
 
   return (
     <div className={styles.container}>
+      {toast && (
+        <div className={`${styles.toast} ${toast.type === 'success' ? styles.toastSuccess : styles.toastError}`}>
+          {toast.message}
+        </div>
+      )}
+
       <div className={styles.header}>
         <h1 className={styles.title}>Base de Contatos</h1>
         <div className={styles.headerActions}>
-          <button className={styles.buttonSecondary}>
+          <input 
+            type="file" 
+            accept=".csv" 
+            style={{ display: 'none' }} 
+            ref={fileInputRef}
+            onChange={handleImport}
+          />
+          <button 
+            className={styles.buttonSecondary}
+            onClick={() => fileInputRef.current?.click()}
+          >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
               <polyline points="17 8 12 3 7 8"></polyline>
@@ -51,12 +151,18 @@ export default function ContactsPage() {
             </svg>
             Importar Planilha (CSV)
           </button>
-          <button className={styles.buttonPrimary}>+ Novo Contato</button>
+          <button className={styles.buttonPrimary} onClick={() => setIsModalOpen(true)}>+ Novo Contato</button>
         </div>
       </div>
 
       <div className={styles.filters}>
-        <input type="text" placeholder="Buscar por nome ou telefone..." className={styles.filterInput} />
+        <input 
+          type="text" 
+          placeholder="Buscar por nome ou telefone..." 
+          className={styles.filterInput} 
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
         <select 
           className={styles.filterSelect}
           value={filterStatus}
@@ -69,40 +175,108 @@ export default function ContactsPage() {
       </div>
 
       <div className={styles.tableContainer}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th className={styles.th}>Nome</th>
-              <th className={styles.th}>Telefone</th>
-              <th className={styles.th}>Equipe</th>
-              <th className={styles.th}>Campos Dinâmicos</th>
-              <th className={styles.th}>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredContacts.map(contact => (
-              <tr key={contact.id} className={styles.tr}>
-                <td className={styles.td} style={{ fontWeight: 500, color: '#fff' }}>{contact.name}</td>
-                <td className={styles.td}>{contact.phone}</td>
-                <td className={styles.td}>{contact.team}</td>
-                <td className={styles.td}>
-                  {Object.entries(contact.fields).map(([key, value]) => (
-                    <span key={key} className={styles.dynamicField}>
-                      {key}: {value}
-                    </span>
-                  ))}
-                </td>
-                <td className={styles.td}>
-                  {contact.status === 'ACTIVE' 
-                    ? <span className={`${styles.statusBadge} ${styles.statusActive}`}>ATIVO</span>
-                    : <span className={`${styles.statusBadge} ${styles.statusException}`}>EXCEÇÃO</span>
-                  }
-                </td>
+        {loading ? (
+          <div className={styles.loadingContainer}>
+            <div className={styles.spinner}></div>
+            <p>Carregando...</p>
+          </div>
+        ) : (
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th className={styles.th}>Nome</th>
+                <th className={styles.th}>Telefone</th>
+                <th className={styles.th}>Campos Dinâmicos</th>
+                <th className={styles.th}>Status</th>
+                <th className={styles.th}>Ações</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredContacts.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className={styles.emptyState}>Nenhum contato encontrado.</td>
+                </tr>
+              ) : (
+                filteredContacts.map(contact => {
+                  let attributesObj = {};
+                  try {
+                    attributesObj = contact.attributes ? JSON.parse(contact.attributes) : {};
+                  } catch (e) {}
+
+                  return (
+                    <tr key={contact.id} className={styles.tr}>
+                      <td className={styles.td} style={{ fontWeight: 500, color: '#fff' }}>{contact.name || '-'}</td>
+                      <td className={styles.td}>{contact.phone}</td>
+                      <td className={styles.td}>
+                        {Object.entries(attributesObj).map(([key, value]) => (
+                          <span key={key} className={styles.dynamicField}>
+                            {key}: {String(value)}
+                          </span>
+                        ))}
+                      </td>
+                      <td className={styles.td}>
+                        {contact.status === 'ACTIVE' 
+                          ? <span className={`${styles.statusBadge} ${styles.statusActive}`}>ATIVO</span>
+                          : <span className={`${styles.statusBadge} ${styles.statusException}`}>EXCEÇÃO</span>
+                        }
+                      </td>
+                      <td className={styles.td}>
+                        <button className={styles.iconButton} onClick={() => handleDelete(contact.id)} title="Excluir">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
+
+      {isModalOpen && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>Novo Contato</h2>
+              <button className={styles.closeButton} onClick={() => setIsModalOpen(false)}>×</button>
+            </div>
+            <form onSubmit={handleCreate}>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Nome</label>
+                <input 
+                  type="text" 
+                  className={styles.input} 
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Nome do contato"
+                />
+              </div>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Telefone *</label>
+                <input 
+                  type="text" 
+                  className={styles.input} 
+                  value={newPhone}
+                  onChange={(e) => setNewPhone(e.target.value)}
+                  placeholder="+55 11 99999-9999"
+                  required
+                />
+              </div>
+              <div className={styles.modalFooter}>
+                <button type="button" className={styles.buttonSecondary} onClick={() => setIsModalOpen(false)}>Cancelar</button>
+                <button type="submit" className={styles.buttonPrimary}>Salvar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
