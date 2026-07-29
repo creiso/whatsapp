@@ -28,6 +28,10 @@ export async function GET(req: Request) {
       direction: msg.direction,
       content: msg.content,
       status: msg.status,
+      type: msg.type,
+      mediaId: msg.mediaId,
+      mimeType: msg.mimeType,
+      fileName: msg.fileName,
       time: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     }));
 
