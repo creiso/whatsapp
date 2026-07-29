@@ -29,6 +29,10 @@ type Message = {
   content: string;
   time: string;
   status?: string;
+  type?: string;
+  mediaId?: string;
+  mimeType?: string;
+  fileName?: string;
 };
 
 type Team = {
@@ -315,7 +319,25 @@ export default function ChatPage() {
                   key={msg.id} 
                   className={`${styles.message} ${msg.direction === 'INBOUND' ? styles.messageInbound : styles.messageOutbound}`}
                 >
-                  {msg.content}
+                  {msg.type === 'IMAGE' && msg.mediaId && (
+                    <img src={`/api/media/${msg.mediaId}`} alt="Imagem" style={{ maxWidth: '100%', borderRadius: '8px', marginBottom: '8px' }} />
+                  )}
+                  {msg.type === 'VIDEO' && msg.mediaId && (
+                    <video controls src={`/api/media/${msg.mediaId}`} style={{ maxWidth: '100%', borderRadius: '8px', marginBottom: '8px' }} />
+                  )}
+                  {msg.type === 'AUDIO' && msg.mediaId && (
+                    <audio controls src={`/api/media/${msg.mediaId}`} style={{ width: '100%', marginBottom: '8px' }} />
+                  )}
+                  {msg.type === 'DOCUMENT' && msg.mediaId && (
+                    <a href={`/api/media/${msg.mediaId}`} download={msg.fileName || 'document'} target="_blank" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', textDecoration: 'none', color: '#fff', marginBottom: '8px' }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                      {msg.fileName || 'Arquivo Anexo'}
+                    </a>
+                  )}
+                  {msg.type === 'STICKER' && msg.mediaId && (
+                    <img src={`/api/media/${msg.mediaId}`} alt="Sticker" style={{ maxWidth: '120px', marginBottom: '8px' }} />
+                  )}
+                  {msg.content && <div>{msg.content}</div>}
                   <div className={styles.messageTime}>
                     {msg.time}
                     {msg.direction === 'OUTBOUND' && (

@@ -40,32 +40,54 @@ export async function POST(request: Request) {
     if (body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]) {
       const message = body.entry[0].changes[0].value.messages[0];
       const from = message.from;
-      const textBody = message.text?.body;
-      
-      if (from && textBody) {
-        const contact = await prisma.contact.upsert({
-          where: { phone: from },
-          update: {},
-          create: { phone: from, name: from }
-        });
+      if (from) {
+        const type = message.type || 'text';
+        let textBody = '';
+        let mediaId = null;
+        let mimeType = null;
+        let fileName = null;
 
-        let conv = await prisma.conversation.findFirst({
-          where: { contactId: contact.id, status: "OPEN" }
-        });
+        if (type === 'text') {
+          textBody = message.text?.body || '';
+        } else if (['image', 'audio', 'video', 'document', 'sticker'].includes(type)) {
+          const mediaObj = message[type];
+          if (mediaObj) {
+            mediaId = mediaObj.id || null;
+            mimeType = mediaObj.mime_type || null;
+            fileName = mediaObj.filename || null;
+            textBody = mediaObj.caption || `[${type.charAt(0).toUpperCase() + type.slice(1)}]`;
+          }
+        }
+        
+        if (textBody || mediaId) {
+          const contact = await prisma.contact.upsert({
+            where: { phone: from },
+            update: {},
+            create: { phone: from, name: from }
+          });
 
-        if (!conv) {
-          conv = await prisma.conversation.create({
-            data: { contactId: contact.id }
+          let conv = await prisma.conversation.findFirst({
+            where: { contactId: contact.id, status: "OPEN" }
+          });
+
+          if (!conv) {
+            conv = await prisma.conversation.create({
+              data: { contactId: contact.id }
+            });
+          }
+
+          await prisma.message.create({
+            data: {
+              conversationId: conv.id,
+              content: textBody || '',
+              type: type.toUpperCase(),
+              mediaId: mediaId,
+              mimeType: mimeType,
+              fileName: fileName,
+              direction: "INBOUND"
+            }
           });
         }
-
-        await prisma.message.create({
-          data: {
-            conversationId: conv.id,
-            content: textBody,
-            direction: "INBOUND"
-          }
-        });
       }
     }
     
