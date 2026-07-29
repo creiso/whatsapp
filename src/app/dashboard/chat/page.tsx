@@ -173,6 +173,13 @@ export default function ChatPage() {
           content
         })
       });
+      fetchMessages();
+      fetchConversations();
+    } catch (e) {
+      console.error("Failed to send message", e);
+    }
+  };
+
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
 
