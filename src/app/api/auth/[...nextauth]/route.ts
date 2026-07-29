@@ -16,7 +16,7 @@ export const authOptions: NextAuthOptions = {
           throw new Error("E-mail e senha são obrigatórios.");
         }
 
-        const email = credentials.email.toLowerCase();
+        const email = credentials.email;
 
         // Check for brute force lock
         let attemptRecord = await prisma.loginAttempt.findUnique({
