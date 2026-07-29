@@ -55,6 +55,12 @@ export default function ChatPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [users, setUsers] = useState<UserData[]>([]);
   
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const previousConversationsRef = useRef<Conversation[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -231,14 +237,13 @@ export default function ChatPage() {
   };
 
   const mediaInputRef = useRef<HTMLInputElement>(null);
-  const audioInputRef = useRef<HTMLInputElement>(null);
 
-  const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'IMAGE' | 'AUDIO' | 'VIDEO' | 'DOCUMENT') => {
-    const file = e.target.files?.[0];
+  const handleMediaUpload = async (file: File | Blob, type: 'IMAGE' | 'AUDIO' | 'VIDEO' | 'DOCUMENT', fileName?: string) => {
     if (!file || !activeConversation) return;
 
     const formData = new FormData();
-    formData.append('file', file);
+    // Se for blob (gravação), nomeamos como audio.ogg, caso contrário file.name
+    formData.append('file', file, fileName || (file as File).name || 'upload');
     formData.append('conversationId', activeConversation.id);
     formData.append('type', type);
 
@@ -261,8 +266,55 @@ export default function ChatPage() {
     } catch (err) {
       console.error("Failed to send media", err);
     }
+  };
 
-    if (e.target) e.target.value = '';
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        // WhatsApp API supports audio/ogg with opus
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/ogg; codecs=opus' });
+        handleMediaUpload(audioBlob, 'AUDIO', 'audio_message.ogg');
+        
+        stream.getTracks().forEach(track => track.stop());
+        setRecordingTime(0);
+        if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+    } catch (err) {
+      console.error("Microphone permission denied or error:", err);
+      alert("Não foi possível acessar o microfone.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
   const handleTransfer = async (teamId: string | null, lockedById?: string | null) => {
@@ -449,14 +501,14 @@ export default function ChatPage() {
                   ref={mediaInputRef} 
                   style={{ display: 'none' }} 
                   accept="image/*,video/*,application/pdf"
-                  onChange={(e) => handleMediaUpload(e, e.target.files?.[0]?.type.startsWith('video') ? 'VIDEO' : e.target.files?.[0]?.type.startsWith('application/pdf') ? 'DOCUMENT' : 'IMAGE')}
-                />
-                <input 
-                  type="file" 
-                  ref={audioInputRef} 
-                  style={{ display: 'none' }} 
-                  accept="audio/*"
-                  onChange={(e) => handleMediaUpload(e, 'AUDIO')}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const fileType = file.type.startsWith('video') ? 'VIDEO' : file.type.startsWith('application/pdf') ? 'DOCUMENT' : 'IMAGE';
+                      handleMediaUpload(file, fileType);
+                    }
+                    e.target.value = '';
+                  }}
                 />
 
                 <button 
@@ -472,21 +524,36 @@ export default function ChatPage() {
                 <button 
                   type="button" 
                   className={styles.sendButton} 
-                  style={{ background: 'rgba(100,100,100,0.1)', color: 'var(--text-primary)' }}
-                  onClick={() => audioInputRef.current?.click()}
-                  title="Enviar Áudio"
+                  style={{ background: isRecording ? 'var(--error)' : 'rgba(100,100,100,0.1)', color: isRecording ? '#fff' : 'var(--text-primary)' }}
+                  onClick={isRecording ? stopRecording : startRecording}
+                  title={isRecording ? "Parar Gravação" : "Gravar Áudio"}
                 >
-                  🎙️
+                  {isRecording ? '⏹' : '🎙️'}
                 </button>
 
-                <input 
-                  type="text" 
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  placeholder="Digite uma mensagem..." 
-                  className={styles.input} 
-                />
-                <button type="submit" className={styles.sendButton} disabled={!inputText.trim()}>
+                {isRecording ? (
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '12px', padding: '0 16px', color: 'var(--error)' }}>
+                    <div className={styles.spinner} style={{ width: '16px', height: '16px', borderTopColor: 'var(--error)' }} />
+                    Gravando... {formatTime(recordingTime)}
+                  </div>
+                ) : (
+                  <input 
+                    type="text" 
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(e)}
+                    placeholder="Digite sua mensagem..." 
+                    className={styles.input}
+                    disabled={!canType}
+                  />
+                )}
+
+                <button 
+                  type="button" 
+                  className={styles.sendButton} 
+                  onClick={handleSendMessage}
+                  disabled={(!inputText.trim() && !isRecording) || !canType}
+                >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="22" y1="2" x2="11" y2="13"></line>
                     <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
