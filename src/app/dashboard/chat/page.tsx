@@ -517,38 +517,21 @@ export default function ChatPage() {
                   📎
                 </button>
 
-                <button 
-                  type="button" 
-                  className={styles.sendButton} 
-                  style={{ background: isRecording ? 'var(--error)' : 'rgba(100,100,100,0.1)', color: isRecording ? '#fff' : 'var(--text-primary)' }}
-                  onClick={isRecording ? stopRecording : startRecording}
-                  title={isRecording ? "Parar Gravação" : "Gravar Áudio"}
-                >
-                  {isRecording ? '⏹' : '🎙️'}
-                </button>
-
-                {isRecording ? (
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '12px', padding: '0 16px', color: 'var(--error)' }}>
-                    <div className={styles.spinner} style={{ width: '16px', height: '16px', borderTopColor: 'var(--error)' }} />
-                    Gravando... {formatTime(recordingTime)}
-                  </div>
-                ) : (
-                  <input 
-                    type="text" 
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(e)}
-                    placeholder="Digite sua mensagem..." 
-                    className={styles.input}
-                    disabled={!canType}
-                  />
-                )}
+                <input 
+                  type="text" 
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(e)}
+                  placeholder="Digite sua mensagem..." 
+                  className={styles.input}
+                  disabled={!canType}
+                />
 
                 <button 
                   type="button" 
                   className={styles.sendButton} 
                   onClick={handleSendMessage}
-                  disabled={(!inputText.trim() && !isRecording) || !canType}
+                  disabled={!inputText.trim() || !canType}
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="22" y1="2" x2="11" y2="13"></line>
