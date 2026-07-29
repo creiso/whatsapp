@@ -59,6 +59,8 @@ export async function GET(req: Request) {
         contactName: conv.contact.name || conv.contact.phone,
         contactId: conv.contact.id,
         lastMessage: lastMessage?.content || "Nenhuma mensagem",
+        lastMessageId: lastMessage?.id || null,
+        lastMessageDirection: lastMessage?.direction || null,
         time: lastMessage ? new Date(lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "",
         lockedBy: conv.lockedBy?.name || conv.lockedBy?.email || null,
         lockedById: conv.lockedById,

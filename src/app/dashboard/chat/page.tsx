@@ -17,6 +17,8 @@ type Conversation = {
   contactName: string;
   contactId: string;
   lastMessage: string;
+  lastMessageId: string | null;
+  lastMessageDirection: string | null;
   time: string;
   lockedBy: string | null;
   lockedById: string | null;
@@ -54,6 +56,12 @@ export default function ChatPage() {
   const [users, setUsers] = useState<UserData[]>([]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const previousConversationsRef = useRef<Conversation[]>([]);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    audioRef.current = new Audio('/notification.mp3');
+  }, []);
 
   // Fetch current user details
   useEffect(() => {
@@ -98,6 +106,25 @@ export default function ChatPage() {
       const res = await fetch(url);
       const data = await res.json();
       if (!data.error) {
+        
+        // Notification logic
+        if (previousConversationsRef.current.length > 0 && currentUser) {
+          const newInbound = data.some((conv: Conversation) => {
+            if (conv.lockedById === currentUser.id && conv.lastMessageDirection === 'INBOUND') {
+              const prev = previousConversationsRef.current.find(c => c.id === conv.id);
+              if (prev && prev.lastMessageId !== conv.lastMessageId) {
+                return true;
+              }
+            }
+            return false;
+          });
+
+          if (newInbound) {
+            audioRef.current?.play().catch(e => console.log('Audio play failed:', e));
+          }
+        }
+
+        previousConversationsRef.current = data;
         setConversations(data);
         // Update active conversation reference using functional state to avoid stale closures
         setActiveConversation(prev => {
