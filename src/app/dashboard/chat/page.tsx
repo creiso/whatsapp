@@ -243,8 +243,8 @@ export default function ChatPage() {
           <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
             <button 
               style={{
-                flex: 1, padding: '8px', background: filter === 'triagem' ? 'var(--primary)' : 'rgba(255,255,255,0.1)', 
-                color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px'
+                flex: 1, padding: '8px', background: filter === 'triagem' ? 'var(--primary)' : 'rgba(100,100,100,0.1)', 
+                color: 'var(--text-primary)', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px'
               }}
               onClick={() => setFilter('triagem')}
             >
@@ -252,8 +252,8 @@ export default function ChatPage() {
             </button>
             <button 
               style={{
-                flex: 1, padding: '8px', background: filter === 'team' ? 'var(--primary)' : 'rgba(255,255,255,0.1)', 
-                color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px'
+                flex: 1, padding: '8px', background: filter === 'team' ? 'var(--primary)' : 'rgba(100,100,100,0.1)', 
+                color: 'var(--text-primary)', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px'
               }}
               onClick={() => setFilter('team')}
             >
@@ -291,7 +291,7 @@ export default function ChatPage() {
             </div>
           ))}
           {conversations.length === 0 && (
-             <div style={{ padding: '20px', textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+             <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '14px' }}>
                Nenhuma conversa encontrada.
              </div>
           )}
@@ -308,8 +308,8 @@ export default function ChatPage() {
                   {activeConversation.contactName.charAt(0)}
                 </div>
                 <div>
-                  <h2 style={{ fontSize: 16, color: '#fff', margin: 0 }}>{activeConversation.contactName}</h2>
-                  <span style={{ fontSize: 13, color: '#9ca3af' }}>
+                  <h2 style={{ fontSize: 16, color: 'var(--text-primary)', margin: 0 }}>{activeConversation.contactName}</h2>
+                  <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
                     {activeConversation.lockedBy ? `Atendido por ${activeConversation.lockedBy}` : 'Aguardando atendimento'}
                   </span>
                 </div>
@@ -317,9 +317,9 @@ export default function ChatPage() {
 
               {(currentUser?.role === 'ADMIN' || activeConversation.teamId === null) && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '13px', color: '#9ca3af' }}>Atribuir à Equipe:</span>
+                  <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Atribuir à Equipe:</span>
                   <select 
-                    style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid var(--surface-border)', padding: '6px', borderRadius: '4px' }}
+                    style={{ background: 'rgba(255,255,255,0.1)', color: 'var(--text-primary)', border: '1px solid var(--surface-border)', padding: '6px', borderRadius: '4px' }}
                     value={activeConversation.teamId || ''}
                     onChange={(e) => handleTransfer(e.target.value || null, activeConversation.lockedById)}
                   >
@@ -331,9 +331,9 @@ export default function ChatPage() {
                   
                   {currentUser?.role === 'ADMIN' && (
                     <>
-                      <span style={{ fontSize: '13px', color: '#9ca3af', marginLeft: '12px' }}>Atribuir ao Agente:</span>
+                      <span style={{ fontSize: '13px', color: 'var(--text-secondary)', marginLeft: '12px' }}>Atribuir ao Agente:</span>
                       <select 
-                        style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid var(--surface-border)', padding: '6px', borderRadius: '4px' }}
+                        style={{ background: 'rgba(255,255,255,0.1)', color: 'var(--text-primary)', border: '1px solid var(--surface-border)', padding: '6px', borderRadius: '4px' }}
                         value={activeConversation.lockedById || ''}
                         onChange={(e) => handleTransfer(activeConversation.teamId, e.target.value || null)}
                       >
@@ -412,7 +412,7 @@ export default function ChatPage() {
                 <button 
                   type="button" 
                   className={styles.sendButton} 
-                  style={{ background: 'rgba(255,255,255,0.1)' }}
+                  style={{ background: 'rgba(100,100,100,0.1)', color: 'var(--text-primary)' }}
                   onClick={() => mediaInputRef.current?.click()}
                   title="Enviar Mídia / Documento"
                 >
@@ -422,7 +422,7 @@ export default function ChatPage() {
                 <button 
                   type="button" 
                   className={styles.sendButton} 
-                  style={{ background: 'rgba(255,255,255,0.1)' }}
+                  style={{ background: 'rgba(100,100,100,0.1)', color: 'var(--text-primary)' }}
                   onClick={() => audioInputRef.current?.click()}
                   title="Enviar Áudio"
                 >
@@ -450,7 +450,7 @@ export default function ChatPage() {
             )}
           </>
         ) : (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', flexDirection: 'column', gap: 16 }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', flexDirection: 'column', gap: 16 }}>
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
             </svg>

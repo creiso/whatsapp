@@ -1,15 +1,32 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --background: #0f1115;
+  --background: #FFFFFF;
+  --foreground: #222222;
+  --primary: #FFC629;
+  --primary-hover: #e5b225;
+  --secondary: #3AB0A7;
+  --surface: #f8f9fa;
+  --surface-border: #e5e7eb;
+  --text-secondary: #6b7280;
+  --text-primary: #111827;
+  --error: #ef4444;
+  --success: #3AB0A7;
+  --font-sans: 'Inter', sans-serif;
+}
+
+[data-theme="dark"] {
+  --background: #000000;
   --foreground: #e0e2e6;
-  --primary: #3b82f6;
-  --primary-hover: #2563eb;
-  --surface: #1a1d24;
-  --surface-border: #2a2e37;
+  --primary: #FFC629;
+  --primary-hover: #e5b225;
+  --secondary: #555555;
+  --surface: #1a1a1a;
+  --surface-border: #333333;
+  --text-secondary: #9ca3af;
+  --text-primary: #ffffff;
   --error: #ef4444;
   --success: #10b981;
-  --font-sans: 'Inter', sans-serif;
 }
 
 * {

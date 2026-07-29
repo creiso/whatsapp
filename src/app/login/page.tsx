@@ -42,7 +42,8 @@ export default function LoginPage() {
     <div className={styles.container}>
       <div className={styles.card}>
         <div className={styles.header}>
-          <h1 className={styles.title}>WhatsApp CRM</h1>
+          <img src="/logo.png" alt="LeadMoon" style={{ width: '64px', height: '64px', margin: '0 auto 16px', display: 'block', borderRadius: '50%' }} />
+          <h1 className={styles.title}>LeadMoon</h1>
           <p className={styles.subtitle}>Acesse sua conta local para continuar</p>
         </div>
 

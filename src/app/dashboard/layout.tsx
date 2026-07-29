@@ -22,6 +22,25 @@ export default function DashboardLayout({
     }
   }, [status, router]);
 
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    } else {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+  };
+
   useEffect(() => {
     if (status === 'authenticated') {
       fetch('/api/users/me')
@@ -51,11 +70,9 @@ export default function DashboardLayout({
   return (
     <div className={styles.layout}>
       <aside className={styles.sidebar}>
-        <div className={styles.logo}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-          </svg>
-          WCRM
+        <div className={styles.logo} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '20px', fontWeight: 'bold' }}>
+          <img src="/logo.png" alt="LeadMoon Logo" style={{ width: 32, height: 32, borderRadius: '50%' }} />
+          LeadMoon
         </div>
         
         <nav className={styles.nav}>
@@ -71,6 +88,13 @@ export default function DashboardLayout({
         </nav>
         
         <div style={{ marginTop: 'auto' }}>
+          <button 
+            onClick={toggleTheme} 
+            className={styles.navItem}
+            style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            {theme === 'dark' ? '☀️ Modo Claro' : '🌙 Modo Escuro'}
+          </button>
           <button 
             onClick={() => signOut({ callbackUrl: '/login' })} 
             className={styles.navItem}
