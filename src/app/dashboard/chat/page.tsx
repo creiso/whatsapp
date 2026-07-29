@@ -173,11 +173,39 @@ export default function ChatPage() {
           content
         })
       });
+  const mediaInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
+
+  const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'IMAGE' | 'AUDIO' | 'VIDEO' | 'DOCUMENT') => {
+    const file = e.target.files?.[0];
+    if (!file || !activeConversation) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('conversationId', activeConversation.id);
+    formData.append('type', type);
+
+    const tempMsg: Message = {
+      id: Date.now().toString(),
+      direction: 'OUTBOUND',
+      content: `[Enviando ${type.toLowerCase()}...]`,
+      status: 'sending',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    setMessages(prev => [...prev, tempMsg]);
+
+    try {
+      await fetch('/api/chat/messages/media', {
+        method: 'POST',
+        body: formData
+      });
       fetchMessages();
       fetchConversations();
-    } catch (e) {
-      console.error("Failed to send message", e);
+    } catch (err) {
+      console.error("Failed to send media", err);
     }
+
+    if (e.target) e.target.value = '';
   };
 
   const handleTransfer = async (teamId: string | null, lockedById?: string | null) => {
@@ -359,6 +387,41 @@ export default function ChatPage() {
 
             {canType ? (
               <form onSubmit={handleSendMessage} className={styles.inputArea}>
+                <input 
+                  type="file" 
+                  ref={mediaInputRef} 
+                  style={{ display: 'none' }} 
+                  accept="image/*,video/*,application/pdf"
+                  onChange={(e) => handleMediaUpload(e, e.target.files?.[0]?.type.startsWith('video') ? 'VIDEO' : e.target.files?.[0]?.type.startsWith('application/pdf') ? 'DOCUMENT' : 'IMAGE')}
+                />
+                <input 
+                  type="file" 
+                  ref={audioInputRef} 
+                  style={{ display: 'none' }} 
+                  accept="audio/*"
+                  onChange={(e) => handleMediaUpload(e, 'AUDIO')}
+                />
+
+                <button 
+                  type="button" 
+                  className={styles.sendButton} 
+                  style={{ background: 'rgba(255,255,255,0.1)' }}
+                  onClick={() => mediaInputRef.current?.click()}
+                  title="Enviar Mídia / Documento"
+                >
+                  📎
+                </button>
+
+                <button 
+                  type="button" 
+                  className={styles.sendButton} 
+                  style={{ background: 'rgba(255,255,255,0.1)' }}
+                  onClick={() => audioInputRef.current?.click()}
+                  title="Enviar Áudio"
+                >
+                  🎙️
+                </button>
+
                 <input 
                   type="text" 
                   value={inputText}
