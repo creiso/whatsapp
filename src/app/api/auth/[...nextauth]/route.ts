@@ -16,8 +16,19 @@ export const authOptions: NextAuthOptions = {
           throw new Error("E-mail e senha são obrigatórios.");
         }
 
+        const email = credentials.email.toLowerCase();
+
+        // Check for brute force lock
+        let attemptRecord = await prisma.loginAttempt.findUnique({
+          where: { email }
+        });
+
+        if (attemptRecord && attemptRecord.lockedUntil && attemptRecord.lockedUntil > new Date()) {
+          throw new Error("Muitas tentativas falhas. Conta temporariamente bloqueada por 5 minutos.");
+        }
+
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email }
+          where: { email }
         });
 
         if (!user) {
@@ -27,7 +38,29 @@ export const authOptions: NextAuthOptions = {
         const passwordMatch = await bcrypt.compare(credentials.password, user.password);
 
         if (!passwordMatch) {
+          // Increment failed attempts
+          const newAttempts = (attemptRecord?.attempts || 0) + 1;
+          const lockedUntil = newAttempts >= 10 ? new Date(Date.now() + 5 * 60 * 1000) : null;
+          
+          await prisma.loginAttempt.upsert({
+            where: { email },
+            update: { attempts: newAttempts, lockedUntil },
+            create: { email, attempts: newAttempts, lockedUntil }
+          });
+
+          if (lockedUntil) {
+            throw new Error("Muitas tentativas falhas. Conta temporariamente bloqueada por 5 minutos.");
+          }
+
           throw new Error("Senha incorreta.");
+        }
+
+        // On successful login, reset attempts
+        if (attemptRecord) {
+          await prisma.loginAttempt.update({
+            where: { email },
+            data: { attempts: 0, lockedUntil: null }
+          });
         }
 
         return {
@@ -40,7 +73,8 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   session: {
-    strategy: "jwt"
+    strategy: "jwt",
+    maxAge: 10 * 60 * 60, // 10 hours
   },
   callbacks: {
     async jwt({ token, user }) {

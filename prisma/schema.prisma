@@ -82,6 +82,9 @@ model Conversation {
   status    String   @default("OPEN")
   createdAt DateTime @default(now())
   messages  Message[]
+
+  @@index([contactId])
+  @@index([lockedById])
 }
 
 model Message {
@@ -98,6 +101,9 @@ model Message {
   senderId       String?
   sender         User?    @relation(fields: [senderId], references: [id])
   createdAt      DateTime @default(now())
+
+  @@index([conversationId])
+  @@index([createdAt])
 }
 
 enum Role {
@@ -120,4 +126,12 @@ model MetaTemplate {
   components String? // JSON representation of the template structure
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model LoginAttempt {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  attempts    Int       @default(0)
+  lockedUntil DateTime?
+  updatedAt   DateTime  @updatedAt
 }
