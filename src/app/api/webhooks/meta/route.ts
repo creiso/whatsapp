@@ -59,12 +59,30 @@ export async function POST(request: Request) {
           }
         }
         
+        const contactInfo = body.entry[0].changes[0].value.contacts?.[0];
+        const profileName = contactInfo?.profile?.name || from;
+
         if (textBody || mediaId) {
-          const contact = await prisma.contact.upsert({
-            where: { phone: from },
-            update: {},
-            create: { phone: from, name: from }
-          });
+          let contact = await prisma.contact.findUnique({ where: { phone: from } });
+          
+          if (!contact) {
+            let defaultList = await prisma.contactList.findUnique({ where: { name: 'Fora de Sequencia' } });
+            if (!defaultList) {
+               defaultList = await prisma.contactList.create({ data: { name: 'Fora de Sequencia' } });
+            }
+            contact = await prisma.contact.create({
+              data: {
+                phone: from,
+                name: profileName,
+                lists: { connect: { id: defaultList.id } }
+              }
+            });
+          } else if (!contact.name || contact.name === from) {
+            contact = await prisma.contact.update({
+              where: { phone: from },
+              data: { name: profileName }
+            });
+          }
 
           let conv = await prisma.conversation.findFirst({
             where: { contactId: contact.id, status: "OPEN" }

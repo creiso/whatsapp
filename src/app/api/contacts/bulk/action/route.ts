@@ -14,11 +14,22 @@ export async function POST(req: Request) {
       await prisma.contact.deleteMany({ where: { id: { in: ids } } });
       return NextResponse.json({ success: true, count: ids.length });
     } else if (action === "MOVE") {
-      if (!teamId) return NextResponse.json({ error: "Missing teamId" }, { status: 400 });
-      await prisma.contact.updateMany({
-        where: { id: { in: ids } },
-        data: { teamId },
-      });
+      const targetListId = body.listId;
+      if (!targetListId) return NextResponse.json({ error: "Missing listId" }, { status: 400 });
+      
+      const targetList = await prisma.contactList.findUnique({ where: { id: targetListId } });
+      if (!targetList) return NextResponse.json({ error: "List not found" }, { status: 404 });
+
+      const operations = ids.map((id: string) => prisma.contact.update({
+        where: { id },
+        data: { 
+          teamId: targetList.teamId,
+          lists: { set: [{ id: targetListId }] }
+        }
+      }));
+      
+      await prisma.$transaction(operations);
+
       return NextResponse.json({ success: true, count: ids.length });
     }
 

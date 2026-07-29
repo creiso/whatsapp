@@ -32,7 +32,7 @@ export default function ContactsPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isBulkActionLoading, setIsBulkActionLoading] = useState(false);
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
-  const [bulkMoveTeamId, setBulkMoveTeamId] = useState('');  
+  const [bulkMoveListId, setBulkMoveListId] = useState('');  
   // Layout State
   const [selectedListId, setSelectedListId] = useState<string>('ALL');
   const [sidebarSearch, setSidebarSearch] = useState('');
@@ -332,8 +332,8 @@ export default function ContactsPage() {
   };
 
   const handleBulkMove = async () => {
-    if (!bulkMoveTeamId) {
-      showToast('Selecione uma equipe', 'error');
+    if (!bulkMoveListId) {
+      showToast('Selecione uma lista de destino', 'error');
       return;
     }
     setIsBulkActionLoading(true);
@@ -341,7 +341,7 @@ export default function ContactsPage() {
       const res = await fetch('/api/contacts/bulk/action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'MOVE', ids: selectedIds, teamId: bulkMoveTeamId }),
+        body: JSON.stringify({ action: 'MOVE', ids: selectedIds, listId: bulkMoveListId }),
       });
       if (!res.ok) throw new Error();
       setSelectedIds([]);
@@ -841,15 +841,15 @@ export default function ContactsPage() {
               <button className={styles.closeButton} onClick={() => setIsMoveModalOpen(false)}>×</button>
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.label}>Equipe de Destino</label>
+              <label className={styles.label}>Lista de Destino</label>
               <select 
                 className={styles.input} 
-                value={bulkMoveTeamId}
-                onChange={(e) => setBulkMoveTeamId(e.target.value)}
+                value={bulkMoveListId}
+                onChange={(e) => setBulkMoveListId(e.target.value)}
               >
-                <option value="">Selecione a Equipe</option>
-                {teams.map(team => (
-                  <option key={team.id} value={team.id}>{team.name}</option>
+                <option value="">Selecione a Lista</option>
+                {lists.map(list => (
+                  <option key={list.id} value={list.id}>{list.team ? `${list.team.name} > ` : ''}{list.name}</option>
                 ))}
               </select>
             </div>
