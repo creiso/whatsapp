@@ -61,6 +61,10 @@ export default function ChatPage() {
 
   useEffect(() => {
     audioRef.current = new Audio('/notification.mp3');
+    // Solicita permissão para notificações de área de trabalho
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
   }, []);
 
   // Fetch current user details
@@ -109,10 +113,12 @@ export default function ChatPage() {
         
         // Notification logic
         if (previousConversationsRef.current.length > 0 && currentUser) {
+          let newSenderName = '';
           const newInbound = data.some((conv: Conversation) => {
             if (conv.lockedById === currentUser.id && conv.lastMessageDirection === 'INBOUND') {
               const prev = previousConversationsRef.current.find(c => c.id === conv.id);
               if (prev && prev.lastMessageId !== conv.lastMessageId) {
+                newSenderName = conv.contactName;
                 return true;
               }
             }
@@ -120,7 +126,19 @@ export default function ChatPage() {
           });
 
           if (newInbound) {
+            // Toca o som
             audioRef.current?.play().catch(e => console.log('Audio play failed:', e));
+            
+            // Muda o título da aba
+            document.title = `(1) Nova Mensagem - LeadMoon`;
+            
+            // Dispara a notificação no Windows/Mac
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification('Nova mensagem no LeadMoon', {
+                body: `Você recebeu uma nova mensagem de ${newSenderName}`,
+                icon: '/logo.png'
+              });
+            }
           }
         }
 
@@ -172,6 +190,11 @@ export default function ChatPage() {
   // Scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    
+    // Se o usuário está olhando a conversa, limpa o título da aba
+    if (document.title.includes('(1) Nova Mensagem')) {
+      document.title = 'LeadMoon - WhatsApp CRM';
+    }
   }, [messages]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
