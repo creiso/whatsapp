@@ -57,8 +57,7 @@ export default function ChatPage() {
   
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const recorderRef = useRef<any>(null);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -67,10 +66,15 @@ export default function ChatPage() {
 
   useEffect(() => {
     audioRef.current = new Audio('/notification.mp3');
-    // Solicita permissão para notificações de área de trabalho
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
+    
+    // Initialize MicRecorder
+    // @ts-ignore
+    import('mic-recorder-to-mp3').then((MicRecorder) => {
+      recorderRef.current = new MicRecorder.default({ bitRate: 128 });
+    }).catch((e: any) => console.error("MicRecorder error", e));
   }, []);
 
   // Fetch current user details
@@ -268,47 +272,39 @@ export default function ChatPage() {
     }
   };
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = () => {
-        // WhatsApp API supports audio/ogg with opus
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/ogg; codecs=opus' });
-        handleMediaUpload(audioBlob, 'AUDIO', 'audio_message.ogg');
-        
-        stream.getTracks().forEach(track => track.stop());
-        setRecordingTime(0);
-        if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
-      };
-
-      mediaRecorder.start();
+  const startRecording = () => {
+    if (!recorderRef.current) {
+      alert("Gravador não inicializado ainda.");
+      return;
+    }
+    recorderRef.current.start().then(() => {
       setIsRecording(true);
       setRecordingTime(0);
       recordingIntervalRef.current = setInterval(() => {
         setRecordingTime(prev => prev + 1);
       }, 1000);
-    } catch (err) {
+    }).catch((err: any) => {
       console.error("Microphone permission denied or error:", err);
       alert("Não foi possível acessar o microfone.");
-    }
+    });
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
-    }
+    if (!recorderRef.current || !isRecording) return;
+    
+    recorderRef.current.stop().getMp3().then(([buffer, blob]: any) => {
+      const audioFile = new File(buffer, 'audio_message.mp3', {
+        type: blob.type || 'audio/mpeg',
+        lastModified: Date.now()
+      });
+      handleMediaUpload(audioFile, 'AUDIO', 'audio_message.mp3');
+    }).catch((e: any) => {
+      console.error(e);
+      alert("Erro ao salvar áudio.");
+    });
+
+    setIsRecording(false);
+    if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
   };
 
   const formatTime = (seconds: number) => {
