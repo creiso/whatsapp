@@ -18,10 +18,13 @@ export async function GET(req: Request) {
   }
 
   try {
-    const messages = await prisma.message.findMany({
+    const messagesRaw = await prisma.message.findMany({
       where: { conversationId },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
     });
+
+    const messages = messagesRaw.reverse();
 
     const formattedMessages = messages.map(msg => ({
       id: msg.id,
