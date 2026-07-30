@@ -105,6 +105,34 @@ export async function POST(request: Request) {
               direction: "INBOUND"
             }
           });
+
+          // Send Push Notification
+          if (conv.lockedById) {
+            const agent = await prisma.user.findUnique({
+              where: { id: conv.lockedById },
+              select: { expoPushToken: true }
+            });
+
+            if (agent?.expoPushToken) {
+              const pushMessage = {
+                to: agent.expoPushToken,
+                sound: 'default',
+                title: profileName,
+                body: textBody || `[Nova Mensagem - ${type.toUpperCase()}]`,
+                data: { conversationId: conv.id },
+              };
+
+              fetch('https://exp.host/--/api/v2/push/send', {
+                method: 'POST',
+                headers: {
+                  Accept: 'application/json',
+                  'Accept-encoding': 'gzip, deflate',
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(pushMessage),
+              }).catch(err => console.error('Erro ao enviar push:', err));
+            }
+          }
         }
       }
     }
