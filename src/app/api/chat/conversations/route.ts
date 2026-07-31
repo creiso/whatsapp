@@ -64,12 +64,23 @@ export async function GET(req: Request) {
     // Sort manually by latest message time, since Conversation might not have updatedAt
     const formatted = conversations.map(conv => {
       const lastMessage = conv.messages[0];
+      
+      let displayMessage = "Nenhuma mensagem";
+      if (lastMessage) {
+        if (lastMessage.type === "AUDIO") displayMessage = "🎵 Áudio";
+        else if (lastMessage.type === "IMAGE") displayMessage = "📷 Imagem";
+        else if (lastMessage.type === "VIDEO") displayMessage = "🎥 Vídeo";
+        else if (lastMessage.type === "DOCUMENT") displayMessage = "📄 Documento";
+        else if (lastMessage.type === "TEMPLATE") displayMessage = "📝 Template";
+        else displayMessage = lastMessage.content || "Nenhuma mensagem";
+      }
+
       return {
         id: conv.id,
         contactName: conv.contact.name || conv.contact.phone,
         contactPhone: conv.contact.phone,
         contactId: conv.contact.id,
-        lastMessage: lastMessage?.content || "Nenhuma mensagem",
+        lastMessage: displayMessage,
         lastMessageId: lastMessage?.id || null,
         lastMessageDirection: lastMessage?.direction || null,
         time: lastMessage ? new Date(lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "",
