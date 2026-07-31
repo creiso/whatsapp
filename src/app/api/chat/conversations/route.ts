@@ -47,6 +47,16 @@ export async function GET(req: Request) {
         messages: {
           orderBy: { createdAt: 'desc' },
           take: 1
+        },
+        _count: {
+          select: {
+            messages: {
+              where: {
+                direction: "INBOUND",
+                status: { not: "READ" }
+              }
+            }
+          }
         }
       }
     });
@@ -57,6 +67,7 @@ export async function GET(req: Request) {
       return {
         id: conv.id,
         contactName: conv.contact.name || conv.contact.phone,
+        contactPhone: conv.contact.phone,
         contactId: conv.contact.id,
         lastMessage: lastMessage?.content || "Nenhuma mensagem",
         lastMessageId: lastMessage?.id || null,
@@ -65,6 +76,7 @@ export async function GET(req: Request) {
         lockedBy: conv.lockedBy?.name || conv.lockedBy?.email || null,
         lockedById: conv.lockedById,
         teamId: conv.contact.teamId,
+        unreadCount: conv._count.messages
       };
     });
 
