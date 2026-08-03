@@ -23,6 +23,7 @@ type Conversation = {
   lockedBy: string | null;
   lockedById: string | null;
   teamId: string | null;
+  unreadCount: number;
 };
 
 type Message = {
@@ -51,6 +52,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   
   const [inputText, setInputText] = useState('');
+  const [isSending, setIsSending] = useState(false);
   const [filter, setFilter] = useState<'triagem' | 'team'>('triagem');
   const [teams, setTeams] = useState<Team[]>([]);
   const [users, setUsers] = useState<UserData[]>([]);
@@ -183,14 +185,14 @@ export default function ChatPage() {
   // Polling intervals
   useEffect(() => {
     fetchConversations();
-    const interval = setInterval(fetchConversations, 5000);
+    const interval = setInterval(fetchConversations, 3000);
     return () => clearInterval(interval);
   }, [currentUser, filter]);
 
   useEffect(() => {
     if (activeConversation) {
       fetchMessages();
-      const interval = setInterval(fetchMessages, 3000);
+      const interval = setInterval(fetchMessages, 2000);
       return () => clearInterval(interval);
     } else {
       setMessages([]);
@@ -209,10 +211,11 @@ export default function ChatPage() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim() || !activeConversation) return;
+    if (!inputText.trim() || !activeConversation || isSending) return;
 
     const content = inputText.trim();
     setInputText('');
+    setIsSending(true);
 
     // Optimistic UI
     const tempMsg: Message = {
@@ -237,6 +240,8 @@ export default function ChatPage() {
       fetchConversations();
     } catch (e) {
       console.error("Failed to send message", e);
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -386,6 +391,9 @@ export default function ChatPage() {
                   )}
                 </div>
               </div>
+              {conv.unreadCount > 0 && activeConversation?.id !== conv.id && (
+                <div className={styles.unreadBadge}>{conv.unreadCount}</div>
+              )}
             </div>
           ))}
           {conversations.length === 0 && (
@@ -531,7 +539,7 @@ export default function ChatPage() {
                   type="button" 
                   className={styles.sendButton} 
                   onClick={handleSendMessage}
-                  disabled={!inputText.trim() || !canType}
+                  disabled={!inputText.trim() || !canType || isSending}
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="22" y1="2" x2="11" y2="13"></line>

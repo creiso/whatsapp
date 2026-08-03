@@ -24,6 +24,16 @@ export async function GET(req: Request) {
       take: 100,
     });
 
+    // Mark INBOUND messages as READ when user opens the conversation
+    await prisma.message.updateMany({
+      where: {
+        conversationId,
+        direction: 'INBOUND',
+        status: { not: 'READ' }
+      },
+      data: { status: 'READ' }
+    });
+
     const messages = messagesRaw.reverse();
 
     const formattedMessages = messages.map(msg => ({

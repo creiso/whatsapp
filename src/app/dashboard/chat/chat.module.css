@@ -49,10 +49,26 @@
   border-bottom: 1px solid var(--surface-border);
   cursor: pointer;
   transition: background 0.2s;
+  align-items: center;
 }
 
 .conversationItem:hover {
   background: rgba(255, 255, 255, 0.05);
+}
+
+.unreadBadge {
+  background: #25d366;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0 5px;
 }
 
 .conversationItemActive {
