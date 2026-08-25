@@ -13,10 +13,12 @@
 
   // Guard routing logic
   $: if (initialized && !$loading) {
-    const publicRoutes = ['/login', '/register', '/setup'];
-    if (!$user && !publicRoutes.includes($page.url.pathname)) {
+    const publicOnlyRoutes = ['/login', '/register', '/setup'];
+    const sharedRoutes = ['/invite'];
+    
+    if (!$user && !publicOnlyRoutes.includes($page.url.pathname) && !sharedRoutes.includes($page.url.pathname)) {
       goto('/login');
-    } else if ($user && publicRoutes.includes($page.url.pathname)) {
+    } else if ($user && publicOnlyRoutes.includes($page.url.pathname)) {
       goto('/');
     }
   }

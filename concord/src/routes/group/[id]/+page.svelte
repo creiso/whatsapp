@@ -64,7 +64,7 @@
       
     if (data) {
       const baseUrl = window.location.origin;
-      inviteLink = `${baseUrl}/register?token=${data.token}`;
+      inviteLink = `${baseUrl}/invite?token=${data.token}`;
     }
     generatingInvite = false;
   };
