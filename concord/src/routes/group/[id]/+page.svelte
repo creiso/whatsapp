@@ -168,30 +168,34 @@
 
 <style>
   .container { max-width: 800px; margin: 0 auto; padding: 2rem; }
-  header { margin-bottom: 2rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 1rem; }
-  header a { text-decoration: none; color: #4b5563; font-weight: bold; margin-bottom: 0.5rem; display: inline-block; }
-  h1 { margin: 0.5rem 0; }
-  .badge { background: #e0e7ff; color: #4338ca; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.875rem; font-weight: bold; }
+  header { margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; }
+  header a { text-decoration: none; color: var(--text-muted); font-weight: bold; margin-bottom: 0.5rem; display: inline-block; transition: color 0.2s; }
+  header a:hover { color: var(--text-main); }
+  h1 { margin: 0.5rem 0; color: var(--text-main); }
+  .badge { background: rgba(147, 51, 234, 0.2); color: var(--accent-purple); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.875rem; font-weight: bold; border: 1px solid rgba(147, 51, 234, 0.3); }
   
-  .card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 2rem; }
-  .card h2 { margin-top: 0; margin-bottom: 1rem; border-bottom: 1px solid #f3f4f6; padding-bottom: 0.5rem; }
+  .card { background: var(--bg-card); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px rgba(0,0,0,0.3); margin-bottom: 2rem; }
+  .card h2 { margin-top: 0; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; color: var(--accent-gold); }
   
   .members-list { list-style: none; padding: 0; margin: 0; }
-  .member-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid #f3f4f6; }
+  .member-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid var(--border-color); }
   .member-item:last-child { border-bottom: none; }
-  .member-info { display: flex; align-items: center; gap: 1rem; }
+  .member-info { display: flex; align-items: center; gap: 1rem; color: var(--text-main); }
   
-  .role-badge { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; }
-  .role-badge.lider { background: #fee2e2; color: #991b1b; }
-  .role-badge.moderador { background: #fef3c7; color: #92400e; }
-  .role-badge.ligador { background: #e0e7ff; color: #3730a3; }
+  .role-badge { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; border: 1px solid transparent; }
+  .role-badge.lider { background: rgba(239, 68, 68, 0.1); color: var(--accent-red); border-color: rgba(239, 68, 68, 0.3); }
+  .role-badge.moderador { background: rgba(251, 191, 36, 0.1); color: var(--accent-gold); border-color: rgba(251, 191, 36, 0.3); }
+  .role-badge.ligador { background: rgba(147, 51, 234, 0.1); color: var(--accent-purple); border-color: rgba(147, 51, 234, 0.3); }
   
   .actions { display: flex; gap: 0.5rem; }
-  .btn-small { padding: 0.25rem 0.5rem; border: 1px solid #d1d5db; background: white; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
-  .btn-danger { color: #dc2626; border-color: #fca5a5; background: #fef2f2; }
+  .btn-small { padding: 0.25rem 0.5rem; border: 1px solid var(--border-color); background: var(--bg-dark); color: var(--text-main); border-radius: 4px; cursor: pointer; font-size: 0.75rem; transition: background 0.2s; }
+  .btn-small:hover { background: #333; }
+  .btn-danger { color: var(--accent-red); border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.1); }
+  .btn-danger:hover { background: rgba(239, 68, 68, 0.2); }
   
-  .btn-primary { padding: 0.75rem 1.5rem; background: #2563eb; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
-  .invite-box { margin-top: 1rem; padding: 1rem; background: #f9fafb; border: 1px dashed #d1d5db; border-radius: 4px; }
-  .invite-box input { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 0.5rem; }
-  .help-text { margin: 0; font-size: 0.875rem; color: #6b7280; }
+  .btn-primary { padding: 0.75rem 1.5rem; background: var(--accent-purple); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-purple-hover); }
+  .invite-box { margin-top: 1rem; padding: 1rem; background: var(--bg-dark); border: 1px dashed var(--accent-purple); border-radius: 8px; }
+  .invite-box input { width: 100%; padding: 0.75rem; border-radius: 6px; margin-bottom: 0.5rem; font-family: monospace; font-size: 0.9rem; }
+  .help-text { margin: 0; font-size: 0.875rem; color: var(--text-muted); }
 </style>

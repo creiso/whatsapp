@@ -116,37 +116,43 @@
     justify-content: center;
     align-items: center;
     min-height: 100vh;
+    background-image: radial-gradient(circle at 50% -20%, #3b0764, var(--bg-dark) 50%);
   }
   .card {
-    background: white;
+    background: var(--bg-card);
     padding: 2.5rem;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
     width: 100%;
     max-width: 450px;
+    border: 1px solid var(--border-color);
   }
-  h2 { margin-top: 0; text-align: center; }
-  h3.group-name { text-align: center; color: #4338ca; font-size: 1.5rem; margin-bottom: 2rem; background: #e0e7ff; padding: 1rem; border-radius: 8px; }
-  .invite-text { text-align: center; color: #4b5563; }
-  .user-text { text-align: center; margin-bottom: 1.5rem; font-size: 0.9rem; }
+  h2 { margin-top: 0; text-align: center; color: white; }
+  h3.group-name { text-align: center; color: var(--accent-gold); font-size: 1.5rem; margin-bottom: 2rem; background: rgba(251, 191, 36, 0.1); padding: 1rem; border-radius: 8px; border: 1px solid rgba(251, 191, 36, 0.2); }
+  .invite-text { text-align: center; color: var(--text-muted); }
+  .user-text { text-align: center; margin-bottom: 1.5rem; font-size: 0.9rem; color: var(--text-muted); }
   
   button {
     width: 100%;
     padding: 0.75rem;
-    background: #10b981;
+    background: var(--accent-purple);
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     font-weight: bold;
     cursor: pointer;
     font-size: 1rem;
+    transition: background 0.2s;
   }
-  button:disabled { background: #6ee7b7; }
+  button:hover:not(:disabled) { background: var(--accent-purple-hover); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
   
   .buttons { display: flex; flex-direction: column; gap: 1rem; }
-  .buttons a { text-align: center; padding: 0.75rem; border-radius: 4px; font-weight: bold; text-decoration: none; }
-  .btn-primary { background: #10b981; color: white; }
-  .btn-secondary { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
+  .buttons a { text-align: center; padding: 0.75rem; border-radius: 6px; font-weight: bold; text-decoration: none; transition: background 0.2s; }
+  .btn-primary { background: var(--accent-purple); color: white; }
+  .btn-primary:hover { background: var(--accent-purple-hover); color: white; }
+  .btn-secondary { background: transparent; color: var(--text-main); border: 1px solid var(--border-color); }
+  .btn-secondary:hover { border-color: var(--text-main); color: var(--text-main); }
   
-  .error { background: #fee2e2; color: #b91c1c; padding: 1rem; border-radius: 4px; text-align: center; }
+  .error { background: rgba(239, 68, 68, 0.1); color: var(--accent-red); padding: 1rem; border-radius: 6px; text-align: center; border: 1px solid rgba(239, 68, 68, 0.2); }
 </style>

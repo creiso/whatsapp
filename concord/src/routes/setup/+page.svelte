@@ -105,23 +105,68 @@
     justify-content: center;
     align-items: center;
     min-height: 100vh;
+    background-image: radial-gradient(circle at 50% -20%, #3b0764, var(--bg-dark) 50%);
   }
   .card {
-    background: white;
+    background: var(--bg-card);
     padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
     width: 100%;
     max-width: 400px;
+    border: 1px solid var(--border-color);
   }
-  h2 { margin-top: 0; text-align: center; }
+  h2 {
+    margin-top: 0;
+    text-align: center;
+    color: white;
+  }
   .desc { text-align: center; font-size: 0.9rem; color: #4b5563; margin-bottom: 1.5rem; }
-  .form-group { margin-bottom: 1rem; }
-  label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
-  input { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-  button { width: 100%; padding: 0.75rem; background: #8b5cf6; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
-  button:disabled { background: #c4b5fd; }
-  .error { background: #fee2e2; color: #b91c1c; padding: 0.5rem; border-radius: 4px; margin-bottom: 1rem; text-align: center; }
+  .form-group {
+    margin-bottom: 1.25rem;
+  }
+  label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+  }
+  input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-sizing: border-box;
+  }
+  button {
+    width: 100%;
+    padding: 0.75rem;
+    background: var(--accent-purple);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 1rem;
+    margin-top: 0.5rem;
+  }
+  button:hover:not(:disabled) {
+    background: var(--accent-purple-hover);
+  }
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .error {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--accent-red);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    padding: 0.75rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    text-align: center;
+    font-size: 0.875rem;
+  }
   .success { background: #d1fae5; color: #047857; padding: 1rem; border-radius: 4px; margin-bottom: 1rem; text-align: center; font-weight: bold; }
   .btn-link { display: block; text-align: center; text-decoration: none; padding: 0.75rem; background: #2563eb; color: white; border-radius: 4px; font-weight: bold; }
 </style>

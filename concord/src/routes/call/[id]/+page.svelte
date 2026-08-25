@@ -240,29 +240,35 @@
     height: 100vh;
     display: flex;
     flex-direction: column;
-    background: #111827;
-    color: white;
+    background: var(--bg-dark);
+    color: var(--text-main);
   }
   header {
     padding: 1rem;
     display: flex;
     align-items: center;
-    background: #1f2937;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-color);
   }
   header a {
-    color: #ef4444;
+    color: var(--accent-red);
     text-decoration: none;
     font-weight: bold;
     padding: 0.5rem 1rem;
     background: rgba(239, 68, 68, 0.1);
-    border-radius: 4px;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 6px;
     margin-right: 1rem;
+    transition: background 0.2s;
   }
-  h2 { margin: 0; font-size: 1.25rem; flex: 1; }
+  header a:hover { background: rgba(239, 68, 68, 0.2); }
+  h2 { margin: 0; font-size: 1.25rem; flex: 1; color: var(--text-main); }
   
   .controls { display: flex; gap: 1rem; }
-  .btn-share { padding: 0.5rem 1rem; background: #2563eb; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
-  .btn-stop { padding: 0.5rem 1rem; background: #dc2626; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
+  .btn-share { padding: 0.5rem 1rem; background: var(--accent-purple); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+  .btn-share:hover { background: var(--accent-purple-hover); }
+  .btn-stop { padding: 0.5rem 1rem; background: var(--accent-red); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+  .btn-stop:hover { background: var(--accent-red-hover); }
   
   .workspace {
     flex: 1;
@@ -278,39 +284,43 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    color: #9ca3af;
+    color: var(--text-muted);
   }
   
   .video-grid {
     flex: 1;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    gap: 1rem;
+    gap: 1.5rem;
     overflow-y: auto;
   }
   
   .video-box {
-    background: #374151;
-    border-radius: 8px;
+    background: var(--bg-card);
+    border-radius: 12px;
     position: relative;
     overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 2px solid transparent;
+    border: 2px solid var(--border-color);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
   }
-  .my-screen { border-color: #2563eb; }
+  .my-screen { border-color: var(--accent-purple); }
   
   video { width: 100%; height: 100%; object-fit: contain; background: black; }
   
   .label {
     position: absolute;
-    bottom: 10px;
-    left: 10px;
-    background: rgba(0,0,0,0.7);
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
+    bottom: 12px;
+    left: 12px;
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 6px;
     font-size: 0.875rem;
+    font-weight: bold;
     pointer-events: none;
+    border: 1px solid rgba(255,255,255,0.1);
   }
 </style>

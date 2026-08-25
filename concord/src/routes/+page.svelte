@@ -145,13 +145,13 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--border-color);
     padding-bottom: 1rem;
     margin-bottom: 2rem;
   }
   h1 {
     margin: 0;
-    color: #111827;
+    color: var(--text-main);
   }
   .user-info {
     display: flex;
@@ -160,64 +160,75 @@
   }
   .logout-btn {
     padding: 0.5rem 1rem;
-    background: #ef4444;
+    background: var(--accent-red);
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
+    font-weight: bold;
   }
   .empty-state {
     text-align: center;
     padding: 3rem;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    background: var(--bg-card);
+    border: 1px dashed var(--border-color);
+    border-radius: 12px;
+    color: var(--text-muted);
   }
   .create-group-card {
-    background: white;
+    background: var(--bg-card);
     padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     margin-bottom: 2rem;
   }
-  .create-group-card h2 { margin-top: 0; font-size: 1.25rem; }
+  .create-group-card h2 { margin-top: 0; font-size: 1.25rem; color: var(--text-main); }
   .create-form { display: flex; gap: 1rem; }
-  .create-form input { flex: 1; padding: 0.75rem; border: 1px solid #ccc; border-radius: 4px; }
-  .create-form button { padding: 0.75rem 1.5rem; background: #8b5cf6; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
-  .create-form button:disabled { background: #c4b5fd; }
+  .create-form input { flex: 1; padding: 0.75rem; border-radius: 6px; }
+  .create-form button { padding: 0.75rem 1.5rem; background: var(--accent-purple); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 1.5rem;
   }
   .group-card {
-    background: white;
+    background: var(--bg-card);
     padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    transition: border-color 0.2s;
+  }
+  .group-card:hover {
+    border-color: var(--accent-purple);
   }
   .group-card h3 {
     margin: 0 0 0.5rem 0;
+    color: var(--accent-gold);
   }
   .join-btn {
     margin-top: 1rem;
     padding: 0.75rem;
-    background: #10b981;
-    color: white;
+    background: var(--accent-purple);
+    color: white !important;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     font-weight: bold;
     cursor: pointer;
+    transition: background 0.2s;
   }
+  .join-btn:hover { background: var(--accent-purple-hover); }
   .manage-btn {
     padding: 0.5rem;
-    background: #f3f4f6;
-    color: #374151;
-    border: 1px solid #d1d5db;
-    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted) !important;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
     cursor: pointer;
   }
+  .manage-btn:hover { border-color: var(--text-main); color: var(--text-main) !important; }
 </style>
