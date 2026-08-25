@@ -60,6 +60,7 @@
         expira_em: expira.toISOString()
       })
       .select()
+      .single();
     if (data) {
       let baseUrl = window.location.origin;
       
