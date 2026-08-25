@@ -60,10 +60,15 @@
         expira_em: expira.toISOString()
       })
       .select()
-      .single();
-      
     if (data) {
-      const baseUrl = window.location.origin;
+      let baseUrl = window.location.origin;
+      
+      // Se estiver rodando no aplicativo Desktop (Tauri usa localhost ou tauri://)
+      if (baseUrl.includes('localhost') || baseUrl.includes('tauri')) {
+        // Substitua este link pelo seu link oficial da Vercel!
+        baseUrl = 'https://SEU-LINK-AQUI.vercel.app'; 
+      }
+      
       inviteLink = `${baseUrl}/invite?token=${data.token}`;
     }
     generatingInvite = false;
