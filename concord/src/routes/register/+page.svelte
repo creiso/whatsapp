@@ -72,15 +72,24 @@
       }
       
       // 4. Inserir como membro do grupo do convite (ligador)
-      await supabase
+      const { error: memberError } = await supabase
         .from('concord_group_members')
         .insert({ group_id: invite.group_id, user_id: authData.user.id, papel: 'ligador' });
+        
+      if (memberError) {
+        errorMsg = 'Erro ao entrar na sala: ' + memberError.message;
+        loading = false;
+        return;
+      }
         
       // 5. Marcar convite como usado
       await supabase
         .from('concord_invites')
         .update({ usado: true })
         .eq('token', token);
+        
+      // Recarrega a página para o sistema puxar a sessão e ir pro dashboard
+      window.location.href = '/';
     }
     
     loading = false;
